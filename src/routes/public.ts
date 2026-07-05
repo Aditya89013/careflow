@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { SqlHospitalRepository, mockDb } from "../db";
-import { broadcastHospitalEvent } from "../index";
+import { broadcastHospitalEvent } from "../ws_events";
 
 const router = Router();
 

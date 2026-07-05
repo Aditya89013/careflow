@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { SqlHospitalRepository, mockDb, executeQuery } from "../db";
 import { AllocationService } from "../application/services";
 import { authMiddleware, requireRole } from "../middleware/auth";
-import { broadcastHospitalEvent } from "../index";
+import { broadcastHospitalEvent } from "../ws_events";
 import { UniversalPatient, AdmissionRecord } from "../domain/entities";
 
 const router = Router();

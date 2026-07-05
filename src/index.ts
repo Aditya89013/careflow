@@ -10,6 +10,7 @@ import shiftRouter from "./routes/shifts";
 import publicRouter from "./routes/public";
 import chatbotRouter from "./routes/chatbot";
 import authRouter from "./routes/auth";
+import { subscriptions } from "./ws_events";
 
 dotenv.config();
 
@@ -37,9 +38,6 @@ const server = http.createServer(app);
 
 // Mount WebSocket server
 const wss = new WebSocketServer({ server });
-
-// Map of hospital_id -> set of active WebSocket connections
-const subscriptions = new Map<string, Set<WebSocket>>();
 
 wss.on("connection", (ws: WebSocket) => {
   console.log("WebSocket client connected");
@@ -73,19 +71,6 @@ wss.on("connection", (ws: WebSocket) => {
     console.log("WebSocket client disconnected");
   });
 });
-
-// Broadcast Helper to notify subscribed dashboards of real-time state changes
-export function broadcastHospitalEvent(hospitalId: string, event: any) {
-  const clients = subscriptions.get(hospitalId);
-  if (clients) {
-    const payload = JSON.stringify(event);
-    clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(payload);
-      }
-    });
-  }
-}
 
 server.listen(port, () => {
   console.log(`CareFlow server is running on http://localhost:${port}`);

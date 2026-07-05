@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 import { SqlHospitalRepository } from "../db";
 import { AllocationService, SchedulingService } from "../application/services";
 import { authMiddleware } from "../middleware/auth";
-import { broadcastHospitalEvent } from "../index";
+import { broadcastHospitalEvent } from "../ws_events";
 
 // ──────────────────────────────────────────────────────────────────
 // Native HTTPS helper — avoids node-fetch v2 premature-close issues

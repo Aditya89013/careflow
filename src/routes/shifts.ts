@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { SqlHospitalRepository } from "../db";
 import { SchedulingService } from "../application/services";
 import { authMiddleware, requireRole } from "../middleware/auth";
-import { broadcastHospitalEvent } from "../index";
+import { broadcastHospitalEvent } from "../ws_events";
 
 const router = Router();
 

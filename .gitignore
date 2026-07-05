@@ -41,3 +41,6 @@ verify_db.js
 
 # Vercel local config
 .vercel/
+
+.vercel
+.env*
