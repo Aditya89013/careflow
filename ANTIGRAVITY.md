@@ -60,3 +60,16 @@ This file serves as a handoff context for Antigravity agents continuing the deve
 - **Triage Level Normalization (`src/routes/patients.ts`)**: Implemented `normalizeTriageLevel` to convert arbitrary triage strings to PostgreSQL enum compliant variants.
 - **11-Role Full Hospital Operations Simulation**: Rerun the operations simulation against the live Vercel deployment: `node scratch/ops_sim.mjs`. Verified **100% success** across all roles, with successful patient registrations, shift generation, and swaps.
 
+### 7. Clinical Modules & Advanced RBAC Implementation (Completed)
+- **Clinical Endpoints (`src/routes/clinical.ts`)**: Built and mounted a brand-new router implementing:
+  - **Prescriptions**: e-prescribing orders (`POST /prescriptions`) and queue retrieval (`GET /prescriptions`).
+  - **Medications Administration**: Dose charting (`POST /medications/administer`).
+  - **Labs**: Test orders (`POST /lab-orders`, `GET /lab-orders`) and result updates (`POST /lab-results`).
+  - **Inventory**: Dispense tracker (`PUT /inventory/:id/dispense`) and stock lookup (`GET /inventory`).
+  - **Nurse Alerts**: BED call light logging (`POST /nurse-alerts`, `GET /nurse-alerts`) and nurse resolution (`PUT /nurse-alerts/:id/resolve`).
+  - **Wardboy Tasks**: Orderly transit queue (`GET /wardboy/tasks`, `POST /wardboy/tasks`, `PUT /wardboy/tasks/:id/status`).
+  - **Analytics KPIs**: CMO analytics data engine (`GET /analytics/kpis`).
+  - **Staff Onboarding**: Admin directory addition endpoint (`POST /staff`).
+- **HIPAA Role Scoping**: Restricted `ward_boy` and `lab_tech` roles from accessing raw patient clinical profiles. They are now limited to reading task queues and lab queues respectively, while general patient vitals returns a 403.
+- **Operations Simulation Validation**: Updated the simulation script to verify all clinical actions across the 9 roles, achieving a perfect **10/10 Scorecard** with all endpoints returning green and RBAC correctly throwing 403s where expected.
+
