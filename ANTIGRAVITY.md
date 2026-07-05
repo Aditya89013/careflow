@@ -47,3 +47,10 @@ This file serves as a handoff context for Antigravity agents continuing the deve
 ### 4. Verification State (Completed)
 - **E2E verification tests** ran and succeeded cleanly: `node scratch/verification_test.js` successfully verified patient intake, UPID/PIN generation, login verification, doctor EHR history retrieval, discharge, and post-discharge portal login persistence.
 - **Production bundle build** compiled cleanly with zero TypeScript type or compiler warnings: `cmd /c npm run build` built successfully in 5.57 seconds.
+
+### 5. Production Vercel & Supabase Deployment (Completed)
+- **Environment Variable Setup**: Configured project variables (`DATABASE_URL`, `DATABASE_SSL`, `USE_MOCK_DB`, `JWT_SECRET`, `GEMINI_API_KEY`) on Vercel without double-quote wrapping syntax issues.
+- **Circular Dependency Elimination**: Moved the WebSocket subscriptions map and `broadcastHospitalEvent` helper function into a separate file [src/ws_events.ts](file:///H:/quirky-planck-20260704T195455Z-3-001/quirky-planck-revamp/src/ws_events.ts). Routers now import from `src/ws_events.ts` rather than the main server entrypoint (`src/index.ts`), breaking circular import chains and avoiding WebSocket server initialization crashes in Vercel's serverless environment.
+- **Router Interop Safety**: Updated [api/index.ts](file:///H:/quirky-planck-20260704T195455Z-3-001/quirky-planck-revamp/api/index.ts) to safely unwrap router default exports `(patientRouterRaw as any).default || patientRouterRaw` to support both ESM and CommonJS runtimes cleanly.
+- **Successful Live Deployment**: CareFlow is deployed at [https://careflow-med-inky.vercel.app](https://careflow-med-inky.vercel.app). Verified that the `/api/health` and `/api/v1/public/hospitals` endpoints successfully connect to the Supabase PostgreSQL database instance and retrieve live Delhi hospital census data.
+
