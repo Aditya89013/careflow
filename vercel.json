@@ -5,14 +5,7 @@
       "src": "api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**", "node_modules/**"]
-      }
-    },
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "frontend/dist"
+        "includeFiles": ["src/**", "frontend/dist/**"]
       }
     }
   ],
@@ -22,12 +15,8 @@
       "dest": "/api/index.ts"
     },
     {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
-      "dest": "/frontend/dist/$1"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
+      "dest": "/api/index.ts"
     }
   ],
   "env": {
