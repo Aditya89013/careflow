@@ -1,0 +1,31 @@
+# Ignore native mobile/desktop platforms for Vercel deploy
+platforms/
+
+# Ignore local build scripts
+scripts/
+
+# Ignore mock databases/temp DBs
+careflow_sim.db
+*.db
+*.sqlite
+
+# Ignore local configs
+.env
+.env.local
+.env.*.local
+vercel-env.txt
+test_db.js
+run_migration.js
+verify_db.js
+add_envs.js
+
+# Ignore source control
+.git/
+.github/
+.gitignore
+.vercel/
+
+# Ignore standard dependencies
+node_modules/
+dist/
+frontend/dist/
