@@ -1,0 +1,82 @@
+[
+  {
+    "id": "hosp-osm-249132373",
+    "name": "Paras Hospital, Gurgaon",
+    "latitude": 28.4509689,
+    "longitude": 77.0875533,
+    "address": "C-1, Sushant Lok Phase-1",
+    "contact_phone": "011-XXXXXXXX"
+  },
+  {
+    "id": "hosp-osm-266535263",
+    "name": "Max Hospital",
+    "latitude": 28.462841,
+    "longitude": 77.0759312,
+    "address": "New Delhi",
+    "contact_phone": "011-XXXXXXXX"
+  },
+  {
+    "id": "hosp-osm-632050626",
+    "name": "Base Hospital Delhi Cantt",
+    "latitude": 28.6082403,
+    "longitude": 77.1366732,
+    "address": "New Delhi",
+    "contact_phone": "011-XXXXXXXX"
+  },
+  {
+    "id": "hosp-osm-915724540",
+    "name": "Kailash Hospital & Heart Institute",
+    "latitude": 28.577404,
+    "longitude": 77.3314139,
+    "address": "H-33, Sector- 27",
+    "contact_phone": "0120 244 4444"
+  },
+  {
+    "id": "hosp-osm-928491343",
+    "name": "Delhi Heart and Lung Institute Super Speciality Hospital",
+    "latitude": 28.6416777,
+    "longitude": 77.2052683,
+    "address": "New Delhi",
+    "contact_phone": "011-XXXXXXXX"
+  },
+  {
+    "id": "hosp-osm-939235096",
+    "name": "Indraprastha Apollo Hospital",
+    "latitude": 28.5408389,
+    "longitude": 77.2834999,
+    "address": "New Delhi",
+    "contact_phone": "011-XXXXXXXX"
+  },
+  {
+    "id": "hosp-osm-992920693",
+    "name": "Ayushman Hospital",
+    "latitude": 28.5965201,
+    "longitude": 77.0493833,
+    "address": "Plot No. 2, Dwarka, Sector 12",
+    "contact_phone": "42811114"
+  },
+  {
+    "id": "hosp-osm-995630812",
+    "name": "Govt Dispensory",
+    "latitude": 28.5866431,
+    "longitude": 77.0573761,
+    "address": "Sec-10, Dwarka, Golok Dham Mandir",
+    "contact_phone": "25081423"
+  },
+  {
+    "id": "hosp-osm-1135148185",
+    "name": "Sukhda Hospital",
+    "latitude": 28.5469254,
+    "longitude": 77.2445375,
+    "address": "New Delhi",
+    "contact_phone": "011-XXXXXXXX"
+  },
+  {
+    "id": "hosp-osm-1305481210",
+    "name": "Ram Lal Kundan Lal Orthopaedic Hospital",
+    "latitude": 28.6179569,
+    "longitude": 77.2866841,
+    "address": "Bunglow Plot no. 8, Pandav Nagar, Mayur Vihar, Patparganj",
+    "contact_phone": "+91 11 4318 9000;+91 11 4318 9099"
+  }
+]

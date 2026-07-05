@@ -1,0 +1,21 @@
+{
+  "platform": "ios-tablet",
+  "target_device": "iPad",
+  "orientation": "landscape-locked",
+  "optimization": {
+    "viewport_fit": "cover",
+    "hardware_acceleration": true,
+    "disallow_overscroll": true
+  },
+  "deployment": {
+    "minimum_os_version": "16.0",
+    "required_capabilities": ["wifi", "metal"],
+    "bundle_id": "com.careflow.tablet.ipad"
+  },
+  "scaling_rules": {
+    "target_width": 2048,
+    "target_height": 1536,
+    "responsive_scale_factor": 1.0,
+    "enable_touch_coalescing": true
+  }
+}

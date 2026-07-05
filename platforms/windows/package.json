@@ -1,0 +1,34 @@
+{
+  "name": "careflow-desktop",
+  "version": "1.0.0",
+  "description": "CareFlow Desktop Client for Windows",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "author": "Apex Care Networks",
+  "license": "Proprietary",
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.careflow.desktop",
+    "productName": "CareFlow",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CareFlow HIS"
+    }
+  }
+}
