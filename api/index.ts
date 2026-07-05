@@ -9,12 +9,14 @@ import shiftRouterRaw from "../src/routes/shifts";
 import publicRouterRaw from "../src/routes/public";
 import chatbotRouterRaw from "../src/routes/chatbot";
 import authRouterRaw from "../src/routes/auth";
+import clinicalRouterRaw from "../src/routes/clinical";
 
 const patientRouter = (patientRouterRaw as any).default || patientRouterRaw;
 const shiftRouter = (shiftRouterRaw as any).default || shiftRouterRaw;
 const publicRouter = (publicRouterRaw as any).default || publicRouterRaw;
 const chatbotRouter = (chatbotRouterRaw as any).default || chatbotRouterRaw;
 const authRouter = (authRouterRaw as any).default || authRouterRaw;
+const clinicalRouter = (clinicalRouterRaw as any).default || clinicalRouterRaw;
 
 dotenv.config();
 
@@ -34,6 +36,7 @@ app.use("/api/v1", shiftRouter);
 app.use("/api/v1", publicRouter);
 app.use("/api/v1", chatbotRouter);
 app.use("/api/v1", authRouter);
+app.use("/api/v1", clinicalRouter);
 
 // Serve built frontend static files
 const frontendDist = path.join(__dirname, "../frontend/dist");

@@ -10,6 +10,7 @@ import shiftRouter from "./routes/shifts";
 import publicRouter from "./routes/public";
 import chatbotRouter from "./routes/chatbot";
 import authRouter from "./routes/auth";
+import clinicalRouter from "./routes/clinical";
 import { subscriptions } from "./ws_events";
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use("/api/v1", shiftRouter);
 app.use("/api/v1", publicRouter);
 app.use("/api/v1", chatbotRouter);
 app.use("/api/v1", authRouter);
+app.use("/api/v1", clinicalRouter);
 
 // Set up server
 const server = http.createServer(app);
