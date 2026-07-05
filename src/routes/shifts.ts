@@ -36,6 +36,7 @@ router.post(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "SHIFTS_GENERATED",
+        actor_id: req.user!.userId,
         payload_after: savedShifts
       });
 
@@ -74,6 +75,7 @@ router.post(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "SHIFT_SWAP_REQUEST",
+        actor_id: req.user!.userId,
         payload_after: { shift_id, target_staff_member_id, reason }
       });
 

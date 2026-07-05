@@ -111,6 +111,7 @@ CREATE TABLE shifts (
     shift_date DATE NOT NULL,
     type shift_type NOT NULL,
     status shift_status NOT NULL DEFAULT 'scheduled',
+    rationale TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

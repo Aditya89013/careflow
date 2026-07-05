@@ -7,6 +7,24 @@ import { UniversalPatient, AdmissionRecord } from "../domain/entities";
 
 const router = Router();
 
+function normalizeTriageLevel(level: string): string {
+  if (!level) return "5_non_urgent";
+  const normalized = level.toLowerCase().trim();
+  if (normalized.includes("resuscitation")) return "1_resuscitation";
+  if (normalized.includes("emergent")) return "2_emergent";
+  if (normalized.includes("urgent") && !normalized.includes("less")) return "3_urgent";
+  if (normalized.includes("less_urgent") || normalized.includes("less urgent")) return "4_less_urgent";
+  if (normalized.includes("non_urgent") || normalized.includes("non urgent")) return "5_non_urgent";
+  
+  if (normalized.startsWith("1")) return "1_resuscitation";
+  if (normalized.startsWith("2")) return "2_emergent";
+  if (normalized.startsWith("3")) return "3_urgent";
+  if (normalized.startsWith("4")) return "4_less_urgent";
+  if (normalized.startsWith("5")) return "5_non_urgent";
+
+  return "5_non_urgent";
+}
+
 // Staff Roles list helper for common accesses
 const ALL_STAFF_ROLES = [
   "admin", "receptionist", "doctor", "nurse", "ward_boy", "lab_tech", "pharmacist", "medical_director", "staff", "dept_head"
@@ -36,7 +54,7 @@ router.post(
         first_name: first_name || "Unknown",
         last_name: last_name || "Patient",
         date_of_birth: date_of_birth || "1990-01-01",
-        triage_level,
+        triage_level: normalizeTriageLevel(triage_level),
         required_department_code,
         needs_ventilator: !!needs_ventilator,
         admitted_at: new Date().toISOString(),
@@ -54,6 +72,7 @@ router.post(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "PATIENT_INTAKE",
+        actor_id: req.user!.userId,
         payload_after: patient
       });
 
@@ -158,7 +177,7 @@ router.post(
         first_name: uniPatient.first_name,
         last_name: uniPatient.last_name,
         date_of_birth: uniPatient.date_of_birth,
-        triage_level,
+        triage_level: normalizeTriageLevel(triage_level),
         required_department_code,
         needs_ventilator: !!needs_ventilator,
         admitted_at: uniPatient.admitted_at!,
@@ -176,6 +195,7 @@ router.post(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "PATIENT_INTAKE",
+        actor_id: req.user!.userId,
         payload_after: patient
       });
 
@@ -257,6 +277,7 @@ router.post(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "PATIENT_DISCHARGE",
+        actor_id: req.user!.userId,
         payload_after: { patientId, upid: patient.upid }
       });
 
@@ -293,6 +314,7 @@ router.get(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "CLINICAL_HISTORY_LOOKUP",
+        actor_id: req.user!.userId,
         payload_after: { accessed_upid: upid, accessed_by: req.user!.userId }
       });
 
@@ -401,6 +423,7 @@ router.put(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: "PATIENT_VITALS_UPDATE",
+        actor_id: req.user!.userId,
         payload_after: { patientId, vitals: patient.vitals }
       });
 
@@ -470,6 +493,7 @@ router.post(
         id: `al-${Date.now()}`,
         created_at: new Date().toISOString(),
         action: is_override ? "MANUAL_OVERRIDE_ALLOCATION" : "RECOMMENDED_ALLOCATION",
+        actor_id: req.user!.userId,
         payload_after: allocation
       });
 

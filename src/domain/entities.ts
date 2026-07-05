@@ -121,6 +121,7 @@ export interface AuditEvent {
   id: string;
   created_at: string;
   action: "PATIENT_INTAKE" | "RECOMMENDED_ALLOCATION" | "MANUAL_OVERRIDE_ALLOCATION" | "SHIFT_SWAP_REQUEST" | "EMS_INCOMING_ALERT" | string;
+  actor_id?: string;
   payload_before?: any;
   payload_after?: any;
 }

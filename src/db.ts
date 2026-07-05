@@ -409,9 +409,10 @@ export class SqlHospitalRepository implements HospitalRepository {
       return dbPatient;
     }
     const res = await executeQuery(this.hospitalId, 
-      `INSERT INTO patients (hospital_id, first_name, last_name, date_of_birth, triage_level, required_department_code, needs_ventilator, status, admitted_at, vitals)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO patients (id, hospital_id, first_name, last_name, date_of_birth, triage_level, required_department_code, needs_ventilator, status, admitted_at, vitals)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
+        patient.id || `p-${Date.now()}`,
         this.hospitalId, 
         patient.first_name, 
         patient.last_name, 
@@ -498,9 +499,10 @@ export class SqlHospitalRepository implements HospitalRepository {
       return dbAlloc;
     }
     const res = await executeQuery(this.hospitalId,
-      `INSERT INTO allocations (hospital_id, patient_id, bed_id, ventilator_id, primary_doctor_id, allocated_by, is_override, override_reason, allocated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO allocations (id, hospital_id, patient_id, bed_id, ventilator_id, primary_doctor_id, allocated_by, is_override, override_reason, allocated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
+        allocation.id || `a-${Date.now()}`,
         this.hospitalId,
         allocation.patient_id,
         allocation.bed_id,
@@ -536,9 +538,10 @@ export class SqlHospitalRepository implements HospitalRepository {
         saved.push(dbShift);
       } else {
         const res = await executeQuery(this.hospitalId,
-          `INSERT INTO shifts (hospital_id, staff_member_id, department_id, shift_date, type, status, rationale)
-           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+          `INSERT INTO shifts (id, hospital_id, staff_member_id, department_id, shift_date, type, status, rationale)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
           [
+            shift.id || `sft-${Math.random().toString(36).substr(2, 9)}`,
             this.hospitalId,
             shift.staff_member_id,
             "d2d2d2d2-e3e3-f4f4-0505-161616161616", // Default dept
@@ -562,12 +565,22 @@ export class SqlHospitalRepository implements HospitalRepository {
       });
       return event;
     }
+
+    let dbActorId: string | null = null;
+    if (event.actor_id) {
+      const checkRes = await executeQuery(this.hospitalId, "SELECT id FROM staff_members WHERE id = $1", [event.actor_id]);
+      if (checkRes.rows.length > 0) {
+        dbActorId = event.actor_id;
+      }
+    }
+
     await executeQuery(this.hospitalId,
-      `INSERT INTO audit_logs (hospital_id, actor_id, action, entity_name, entity_id, payload_before, payload_after, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO audit_logs (id, hospital_id, actor_id, action, entity_name, entity_id, payload_before, payload_after, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
+        event.id || `al-${Date.now()}`,
         this.hospitalId,
-        "admin",
+        dbActorId,
         event.action,
         "system",
         event.id,
