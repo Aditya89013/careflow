@@ -54,3 +54,9 @@ This file serves as a handoff context for Antigravity agents continuing the deve
 - **Router Interop Safety**: Updated [api/index.ts](file:///H:/quirky-planck-20260704T195455Z-3-001/quirky-planck-revamp/api/index.ts) to safely unwrap router default exports `(patientRouterRaw as any).default || patientRouterRaw` to support both ESM and CommonJS runtimes cleanly.
 - **Successful Live Deployment**: CareFlow is deployed at [https://careflow-med-inky.vercel.app](https://careflow-med-inky.vercel.app). Verified that the `/api/health` and `/api/v1/public/hospitals` endpoints successfully connect to the Supabase PostgreSQL database instance and retrieve live Delhi hospital census data.
 
+### 6. Database Persistence & Constraint Resolution (Completed)
+- **Primary Key Constraint Fixes (`src/db.ts`)**: Resolved `null value in column "id" of relation "..." violates not-null constraint` errors by modifying the SQL `INSERT` statements for `patients`, `allocations`, and `shifts` to supply the generated entity `id` explicitly.
+- **Audit Logs Foreign Key Validation (`src/db.ts`)**: Added validation in `addAuditEvent` to verify if the `actor_id` exists in the `staff_members` table and fallback to `null` instead of throwing a foreign key violation.
+- **Triage Level Normalization (`src/routes/patients.ts`)**: Implemented `normalizeTriageLevel` to convert arbitrary triage strings to PostgreSQL enum compliant variants.
+- **11-Role Full Hospital Operations Simulation**: Rerun the operations simulation against the live Vercel deployment: `node scratch/ops_sim.mjs`. Verified **100% success** across all roles, with successful patient registrations, shift generation, and swaps.
+
