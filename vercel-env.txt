@@ -1,0 +1,22 @@
+# Vercel Environment Variables for CareFlow HIS
+# ─────────────────────────────────────────────────────────────────
+# Set these in your Vercel Dashboard → Project → Settings → Environment Variables
+# OR use the Vercel CLI: vercel env add <NAME> production
+
+# Required - Supabase PostgreSQL Connection (Transaction Pooler)
+DATABASE_URL=<your-supabase-transaction-pooler-url>
+
+# Required - Enable SSL for Supabase
+DATABASE_SSL=true
+
+# Required - Disable mock database in production
+USE_MOCK_DB=false
+
+# Required - Strong JWT secret (generate with: openssl rand -base64 32)
+JWT_SECRET=<your-strong-jwt-secret>
+
+# Required - Google Gemini API key (from Google AI Studio)
+GEMINI_API_KEY=<your-gemini-api-key>
+
+# Auto-set by Vercel
+NODE_ENV=production
