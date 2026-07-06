@@ -4,21 +4,6 @@ import cors from "cors";
 import * as dotenv from "dotenv";
 import path from "path";
 
-import patientRouterRaw from "../src/routes/patients";
-import shiftRouterRaw from "../src/routes/shifts";
-import publicRouterRaw from "../src/routes/public";
-import chatbotRouterRaw from "../src/routes/chatbot";
-import authRouterRaw from "../src/routes/auth";
-import clinicalRouterRaw from "../src/routes/clinical";
-
-
-const patientRouter = patientRouterRaw?.default || patientRouterRaw;
-const shiftRouter = shiftRouterRaw?.default || shiftRouterRaw;
-const publicRouter = publicRouterRaw?.default || publicRouterRaw;
-const chatbotRouter = chatbotRouterRaw?.default || chatbotRouterRaw;
-const authRouter = authRouterRaw?.default || authRouterRaw;
-const clinicalRouter = clinicalRouterRaw?.default || clinicalRouterRaw;
-
 dotenv.config();
 
 const app = express();
@@ -26,27 +11,47 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-
+// Base healthcheck
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "healthy", timestamp: new Date() });
 });
 
 
-if (patientRouter) app.use("/api/v1", patientRouter);
-if (shiftRouter) app.use("/api/v1", shiftRouter);
-if (publicRouter) app.use("/api/v1", publicRouter);
-if (chatbotRouter) app.use("/api/v1", chatbotRouter);
-if (authRouter) app.use("/api/v1", authRouter);
-if (clinicalRouter) app.use("/api/v1", clinicalRouter);
+// This completely bypasses Vercel's "undefined .default" compiler bug
+const loadRoute = (routePath: string) => {
+  try {
+    const routeModule = require(routePath);
+    // Return standard router, default export, or null if empty
+    return routeModule.default || routeModule.router || routeModule;
+  } catch (err) {
+    console.warn(`[WARN] Route load skipped for ${routePath}`);
+    return null; // Prevents crash if file is missing or empty
+  }
+};
 
+const patientRouter = loadRoute("../src/routes/patients");
+const shiftRouter = loadRoute("../src/routes/shifts");
+const publicRouter = loadRoute("../src/routes/public");
+const chatbotRouter = loadRoute("../src/routes/chatbot");
+const authRouter = loadRoute("../src/routes/auth");
+const clinicalRouter = loadRoute("../src/routes/clinical");
 
+//  Register routes ONLY if they loaded successfully
+if (patientRouter && typeof patientRouter === 'function') app.use("/api/v1", patientRouter);
+if (shiftRouter && typeof shiftRouter === 'function') app.use("/api/v1", shiftRouter);
+if (publicRouter && typeof publicRouter === 'function') app.use("/api/v1", publicRouter);
+if (chatbotRouter && typeof chatbotRouter === 'function') app.use("/api/v1", chatbotRouter);
+if (authRouter && typeof authRouter === 'function') app.use("/api/v1", authRouter);
+if (clinicalRouter && typeof clinicalRouter === 'function') app.use("/api/v1", clinicalRouter);
+
+// Serve built frontend static files
 const frontendDist = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDist));
 
-
+// SPA catch-all: any non-API route serves index.html for React Router
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 
-
+//  Export for Vercel Serverless Architecture
 module.exports = app;
