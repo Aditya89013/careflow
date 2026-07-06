@@ -158,7 +158,6 @@ function MainApp() {
       }, 5000);
     };
 
-    // If VITE_WS_URL is explicitly set to 'none', bypass WebSocket entirely and run polling
     if (import.meta.env.VITE_WS_URL === "none") {
       startPollingFallback();
       return;
@@ -248,7 +247,6 @@ function MainApp() {
     }
   }, [isOnline, outbox]);
 
-  // Fetch recommendations for patient
   const fetchRecommendations = async (patientId: string) => {
     setLoadingRecs(true);
     try {
@@ -267,7 +265,6 @@ function MainApp() {
     }
   };
 
-  // Intake Action
   const handleIntakeSubmit = async (payload: any) => {
     if (!isOnline) {
       setOutbox(prev => [...prev, { endpoint: "patients", payload }]);
@@ -290,9 +287,6 @@ function MainApp() {
     }
   };
 
-
-
-  // Allocation Placement Confirm
   const handleAllocateConfirm = async (payload: any) => {
     if (!isOnline) {
       setOutbox(prev => [...prev, { endpoint: "allocations", payload }]);
@@ -315,7 +309,6 @@ function MainApp() {
     }
   };
 
-  // Generate shift scheduler optimizer trigger
   const handleGenerateShifts = async (payload: any) => {
     try {
       const res = await fetch(`${API_URL}/shifts/generate`, {
@@ -334,7 +327,6 @@ function MainApp() {
     }
   };
 
-  // Swap shift request
   const handleSwapRequest = async (payload: any) => {
     try {
       const res = await fetch(`${API_URL}/shifts/swaps`, {
@@ -351,7 +343,6 @@ function MainApp() {
     }
   };
 
-  // Dispatch public/EMS warning incoming warning alert
   const handleSendAlert = async (payload: any) => {
     try {
       const res = await fetch(`${API_URL}/public/hospitals/${payload.hospitalId}/notify-arrival`, {
@@ -369,28 +360,28 @@ function MainApp() {
     }
   };
 
-  // If login modal is active, display it
+  // Login Modal Toggle
   if (showLogin) {
     return <LoginPage onLoginSuccess={() => setShowLogin(false)} />;
   }
 
-  // If NOT authenticated, show Guest Mode (Finder view + capacity maps)
+  // Guest Mode (Finder view + capacity maps)
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col min-h-screen bg-background">
-        <header className="bg-white text-gray-900 border-b border-gray-200 px-6 py-3 flex justify-between items-center z-50">
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
           <div className="flex items-center space-x-3">
-            <img src={careflowLogo} alt="CareFlow Logo" className="h-9 w-9 object-contain" />
+            <img src={careflowLogo} alt="CareFlow Logo" className="h-8 w-8 object-contain opacity-90" />
             <div>
-              <h1 className="font-black text-lg text-gray-900 leading-none tracking-tight">CareFlow</h1>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Guest Mode Portal</p>
+              <h1 className="font-semibold text-lg text-gray-900 tracking-tight leading-none">CareFlow</h1>
+              <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">Guest Mode Portal</p>
             </div>
           </div>
           <button
             onClick={() => setShowLogin(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-xl transition duration-150 active:scale-95 shadow-md shadow-indigo-100"
+            className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm py-2 px-5 rounded-full transition-colors duration-200"
           >
-            Sign In to Dashboard
+            Sign In
           </button>
         </header>
         <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
@@ -400,8 +391,8 @@ function MainApp() {
             showArrivalAck={showArrivalAck}
           />
         </main>
-        <footer className="bg-white border-t border-gray-100 py-6">
-          <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-xs text-gray-400">
+        <footer className="bg-transparent py-6">
+          <div className="max-w-7xl mx-auto px-6 text-center text-xs text-gray-400">
             <span>&copy; {new Date().getFullYear()} CareFlow Systems. Public Regional Directory.</span>
           </div>
         </footer>
@@ -410,21 +401,21 @@ function MainApp() {
     );
   }
 
-  // For Patient users, force render ONLY their Patient Portal view
+  // Patient Portal View
   if (user?.role === "patient") {
     return (
-      <div className="flex flex-col min-h-screen bg-background">
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center z-50">
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
           <div className="flex items-center space-x-3">
-            <img src={careflowLogo} alt="CareFlow Logo" className="h-9 w-9 object-contain" />
+            <img src={careflowLogo} alt="CareFlow Logo" className="h-8 w-8 object-contain opacity-90" />
             <div>
-              <h1 className="font-black text-lg text-gray-900 leading-none tracking-tight">CareFlow</h1>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Patient Portal</p>
+              <h1 className="font-semibold text-lg text-gray-900 tracking-tight leading-none">CareFlow</h1>
+              <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">Patient Portal</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs py-2 px-4 rounded-xl hover:text-slate-200 transition"
+            className="text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors"
           >
             Logout
           </button>
@@ -432,8 +423,8 @@ function MainApp() {
         <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
           <RoleRouter />
         </main>
-        <footer className="bg-white border-t border-gray-100 py-6">
-          <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-xs text-gray-400">
+        <footer className="bg-transparent py-6">
+          <div className="max-w-7xl mx-auto px-6 text-center text-xs text-gray-400">
             <span>&copy; {new Date().getFullYear()} CareFlow Secure Health Network.</span>
           </div>
         </footer>
@@ -442,62 +433,59 @@ function MainApp() {
     );
   }
 
-  // For Staff / Administrators, display standard simulator layout with tabs
+  // Staff / Administrators View
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      {/* 1. Global Responsive Sandbox Frame header */}
-      <header className="bg-white text-gray-900 border-b border-gray-200 px-6 py-3 flex justify-between items-center z-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
         <div className="flex items-center space-x-3">
-          <img src={careflowLogo} alt="CareFlow Logo" className="h-9 w-9 object-contain" />
+          <img src={careflowLogo} alt="CareFlow Logo" className="h-8 w-8 object-contain opacity-90" />
           <div>
-            <h1 className="font-black text-lg text-gray-900 leading-none tracking-tight">CareFlow</h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Operations Central Simulator</p>
+            <h1 className="font-semibold text-lg text-gray-900 tracking-tight leading-none">CareFlow</h1>
+            <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">Operations Simulator</p>
           </div>
         </div>
 
-        {/* Simulator controls config */}
         <div className="flex items-center space-x-6">
           <div className="flex flex-col text-right">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Session Active</span>
-            <span className="text-xs font-bold text-slate-800">{user?.first_name} ({user?.role.replace("_", " ")})</span>
+            <span className="text-xs font-medium text-gray-900">{user?.first_name}</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wide">{user?.role.replace("_", " ")}</span>
           </div>
 
           <button
             onClick={() => setIsOnline(!isOnline)}
-            className={`px-3 py-1 rounded text-xs font-bold flex items-center space-x-1.5 transition ${
+            className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center space-x-2 transition-colors ${
               isOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
             <span>{isOnline ? "ONLINE" : "OFFLINE"}</span>
           </button>
 
           <button
             onClick={logout}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-1.5 px-3 rounded-lg transition"
+            className="text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors"
           >
             Logout
           </button>
         </div>
       </header>
 
-      {/* Main Container Wrapper */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
-        {/* Navigation Tabs */}
-        <nav className="flex space-x-2 border-b border-gray-100 pb-px">
+        {/* Sleek Minimalist Tabs */}
+        <nav className="flex space-x-6 border-b border-gray-200 pb-px">
           {[
-            { id: "dashboard", label: "Operations Dashboard" },
-            { id: "intake", label: "Patient Intake & Triage" },
+            { id: "dashboard", label: "Dashboard" },
+            { id: "intake", label: "Triage & Allocation" },
             { id: "finder", label: "Emergency Finder" },
             { id: "shifts", label: "Staff Scheduling" }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`pb-3 px-4 text-sm font-bold border-b-2 transition duration-150 active:scale-95 ${
+              className={`pb-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id 
-                  ? "border-blue-600 text-blue-600" 
-                  : "border-transparent text-gray-400 hover:text-gray-600"
+                  ? "border-b-2 border-slate-900 text-slate-900" 
+                  : "border-b-2 border-transparent text-gray-400 hover:text-gray-700"
               }`}
             >
               {tab.label}
@@ -505,7 +493,6 @@ function MainApp() {
           ))}
         </nav>
 
-        {/* Active Screen Mount */}
         <div>
           {activeTab === "dashboard" && <RoleRouter />}
 
@@ -538,15 +525,8 @@ function MainApp() {
           )}
         </div>
       </main>
-
-      {/* Footer Branding */}
-      <footer className="bg-white border-t border-gray-100 py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-xs text-gray-400">
-          <span>&copy; {new Date().getFullYear()} CareFlow Systems. All rights reserved.</span>
-          <span className="font-bold tracking-wider uppercase text-[10px]">Institutional Resource Allocator v2.0</span>
-        </div>
-      </footer>
       <ChatbotWidget userRole={user?.role || "staff"} />
     </div>
   );
-}
+        }
+      
