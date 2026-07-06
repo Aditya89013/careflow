@@ -83,3 +83,5 @@ To make these native clients publicly downloadable for hospital staff on GitHub:
 5. Click **Publish release**.
 
 For instructions on building the native platforms from scratch, see the [Platform Build Guides](file:///H:/quirky-planck-20260704T195455Z-3-001/quirky-planck-revamp/platforms/README.md).
+📝 License & Copyright
+All rights reserved to AA labs.
