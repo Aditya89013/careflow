@@ -16,7 +16,7 @@ app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "healthy", timestamp: new Date() });
 });
 
-
+// 🔥 THE NUCLEAR FIX: Safely load routes using require() 
 // This completely bypasses Vercel's "undefined .default" compiler bug
 const loadRoute = (routePath: string) => {
   try {
@@ -36,7 +36,7 @@ const chatbotRouter = loadRoute("../src/routes/chatbot");
 const authRouter = loadRoute("../src/routes/auth");
 const clinicalRouter = loadRoute("../src/routes/clinical");
 
-//  Register routes ONLY if they loaded successfully
+// ✅ Register routes ONLY if they loaded successfully
 if (patientRouter && typeof patientRouter === 'function') app.use("/api/v1", patientRouter);
 if (shiftRouter && typeof shiftRouter === 'function') app.use("/api/v1", shiftRouter);
 if (publicRouter && typeof publicRouter === 'function') app.use("/api/v1", publicRouter);
@@ -53,5 +53,5 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 
-//  Export for Vercel Serverless Architecture
+// ✅ Export for Vercel Serverless Architecture
 module.exports = app;
