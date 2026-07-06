@@ -11,12 +11,13 @@ import chatbotRouterRaw from "../src/routes/chatbot";
 import authRouterRaw from "../src/routes/auth";
 import clinicalRouterRaw from "../src/routes/clinical";
 
-const patientRouter = (patientRouterRaw as any).default || patientRouterRaw;
-const shiftRouter = (shiftRouterRaw as any).default || shiftRouterRaw;
-const publicRouter = (publicRouterRaw as any).default || publicRouterRaw;
-const chatbotRouter = (chatbotRouterRaw as any).default || chatbotRouterRaw;
-const authRouter = (authRouterRaw as any).default || authRouterRaw;
-const clinicalRouter = (clinicalRouterRaw as any).default || clinicalRouterRaw;
+
+const patientRouter = patientRouterRaw?.default || patientRouterRaw;
+const shiftRouter = shiftRouterRaw?.default || shiftRouterRaw;
+const publicRouter = publicRouterRaw?.default || publicRouterRaw;
+const chatbotRouter = chatbotRouterRaw?.default || chatbotRouterRaw;
+const authRouter = authRouterRaw?.default || authRouterRaw;
+const clinicalRouter = clinicalRouterRaw?.default || clinicalRouterRaw;
 
 dotenv.config();
 
@@ -25,27 +26,27 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Base healthcheck
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "healthy", timestamp: new Date() });
 });
 
-// Register API routers
-app.use("/api/v1", patientRouter);
-app.use("/api/v1", shiftRouter);
-app.use("/api/v1", publicRouter);
-app.use("/api/v1", chatbotRouter);
-app.use("/api/v1", authRouter);
-app.use("/api/v1", clinicalRouter);
 
-// Serve built frontend static files
+if (patientRouter) app.use("/api/v1", patientRouter);
+if (shiftRouter) app.use("/api/v1", shiftRouter);
+if (publicRouter) app.use("/api/v1", publicRouter);
+if (chatbotRouter) app.use("/api/v1", chatbotRouter);
+if (authRouter) app.use("/api/v1", authRouter);
+if (clinicalRouter) app.use("/api/v1", clinicalRouter);
+
+
 const frontendDist = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDist));
 
-// SPA catch-all: any non-API route serves index.html for React Router
+
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 
-// Export the Express app as a serverless function
-export default app;
+
+module.exports = app;
