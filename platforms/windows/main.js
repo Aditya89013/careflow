@@ -23,6 +23,9 @@ function createWindow() {
   // Load deployed web application
   mainWindow.loadURL('https://careflow-med-inky.vercel.app');
 
+  // Open Developer Tools to see what is failing
+  mainWindow.webContents.openDevTools();
+
   mainWindow.on('closed', function () {
     mainWindow = null;
   });
