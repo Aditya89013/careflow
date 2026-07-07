@@ -38,6 +38,9 @@ export interface MockDbSchema {
   staff_contracts: any[];
   payroll_runs: any[];
   payroll_records: any[];
+  attendance_connectors: any[];
+  attendance_devices: any[];
+  attendance_events: any[];
 }
 
 // Load OSM Delhi hospitals
@@ -233,7 +236,10 @@ export const mockDb: MockDbSchema = {
     { id: "c-adm", staff_member_id: "s-admin", hourly_rate: 30.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 }
   ],
   payroll_runs: [],
-  payroll_records: []
+  payroll_records: [],
+  attendance_connectors: [],
+  attendance_devices: [],
+  attendance_events: []
 };
 
 // Database Query Executer
@@ -1076,5 +1082,146 @@ export class SqlHospitalRepository implements HospitalRepository {
       `SELECT * FROM payroll_runs ORDER BY processed_at DESC`
     );
     return res.rows;
+  }
+
+  // =========================================================================
+  // ATTENDANCE INTEGRATION METHODS
+  // =========================================================================
+
+  public async getAttendanceConnectors(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.attendance_connectors.filter(c => c.hospital_id === this.hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM attendance_connectors WHERE hospital_id = $1 ORDER BY created_at DESC`,
+      [this.hospitalId]
+    );
+    return res.rows;
+  }
+
+  public async upsertAttendanceConnector(data: any): Promise<any> {
+    if (useMockDb) {
+      const existing = mockDb.attendance_connectors.findIndex(c => c.id === data.id);
+      const record = { ...data, id: data.id ?? `conn-${Date.now()}`, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), status: 'inactive', records_synced: 0 };
+      if (existing >= 0) {
+        mockDb.attendance_connectors[existing] = { ...mockDb.attendance_connectors[existing], ...record };
+        return mockDb.attendance_connectors[existing];
+      }
+      mockDb.attendance_connectors.push(record);
+      return record;
+    }
+    if (data.id) {
+      const res = await executeQuery(this.hospitalId,
+        `UPDATE attendance_connectors SET name=$1, provider=$2, config=$3, sync_mode=$4, poll_interval_sec=$5, updated_at=NOW()
+         WHERE id=$6 AND hospital_id=$7 RETURNING *`,
+        [data.name, data.provider, JSON.stringify(data.config), data.sync_mode, data.poll_interval_sec, data.id, this.hospitalId]
+      );
+      return res.rows[0];
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO attendance_connectors (hospital_id, name, provider, config, sync_mode, poll_interval_sec)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [this.hospitalId, data.name, data.provider, JSON.stringify(data.config), data.sync_mode, data.poll_interval_sec]
+    );
+    return res.rows[0];
+  }
+
+  public async deleteAttendanceConnector(id: string, hospitalId: string): Promise<void> {
+    if (useMockDb) {
+      const idx = mockDb.attendance_connectors.findIndex(c => c.id === id && c.hospital_id === hospitalId);
+      if (idx >= 0) mockDb.attendance_connectors.splice(idx, 1);
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `DELETE FROM attendance_connectors WHERE id=$1 AND hospital_id=$2`,
+      [id, hospitalId]
+    );
+  }
+
+  public async bulkInsertAttendanceEvents(hospitalId: string, connectorId: string, events: any[]): Promise<void> {
+    if (useMockDb) {
+      events.forEach(e => {
+        const key = `${hospitalId}-${e.employee_code}-${e.punch_timestamp?.toISOString()}-${e.punch_type}`;
+        const exists = mockDb.attendance_events.some(ev => `${ev.hospital_id}-${ev.employee_code}-${ev.punch_timestamp}-${ev.punch_type}` === key);
+        if (!exists) {
+          mockDb.attendance_events.push({ ...e, id: `ae-${Date.now()}-${Math.random()}`, hospital_id: hospitalId, connector_id: connectorId, created_at: new Date().toISOString() });
+        }
+      });
+      return;
+    }
+    for (const e of events) {
+      try {
+        await executeQuery(this.hospitalId,
+          `INSERT INTO attendance_events
+           (hospital_id, connector_id, employee_code, employee_name, department, punch_timestamp, punch_type, punch_type_raw, verify_method, verify_method_raw, location_name, device_serial, temperature, source_system, source_event_id, raw_payload)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+           ON CONFLICT (hospital_id, employee_code, punch_timestamp, punch_type) DO NOTHING`,
+          [hospitalId, connectorId, e.employee_code, e.employee_name, e.department,
+           e.punch_timestamp, e.punch_type, e.punch_type_raw, e.verify_method, e.verify_method_raw,
+           e.location_name, e.device_serial, e.temperature, e.source_system, e.source_event_id,
+           e.raw_payload ? JSON.stringify(e.raw_payload) : null]
+        );
+      } catch (_) { /* skip duplicates */ }
+    }
+  }
+
+  public async getAttendanceEvents(hospitalId: string, opts: { date?: Date; employee_code?: string; page: number; page_size: number }): Promise<{ data: any[]; total: number }> {
+    const { date, employee_code, page, page_size } = opts;
+    if (useMockDb) {
+      let events = mockDb.attendance_events.filter(e => e.hospital_id === hospitalId);
+      if (date) {
+        const d = date.toISOString().split('T')[0];
+        events = events.filter(e => String(e.punch_timestamp).startsWith(d));
+      }
+      if (employee_code) events = events.filter(e => e.employee_code === employee_code);
+      events.sort((a, b) => String(b.punch_timestamp).localeCompare(String(a.punch_timestamp)));
+      const start = (page - 1) * page_size;
+      return { data: events.slice(start, start + page_size), total: events.length };
+    }
+    const dateFilter = date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const params: any[] = [hospitalId, dateFilter];
+    let empFilter = '';
+    if (employee_code) { params.push(employee_code); empFilter = `AND employee_code = $${params.length}`; }
+    const offset = (page - 1) * page_size;
+    params.push(page_size, offset);
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM attendance_events
+       WHERE hospital_id=$1 AND DATE(punch_timestamp)=$2 ${empFilter}
+       ORDER BY punch_timestamp DESC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+    const countRes = await executeQuery(this.hospitalId,
+      `SELECT COUNT(*) FROM attendance_events WHERE hospital_id=$1 AND DATE(punch_timestamp)=$2 ${empFilter}`,
+      params.slice(0, employee_code ? 3 : 2)
+    );
+    return { data: res.rows, total: parseInt(countRes.rows[0].count) };
+  }
+
+  public async getAttendanceDevices(hospitalId: string): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.attendance_devices.filter(d => d.hospital_id === hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT d.*, c.name as connector_name, c.provider FROM attendance_devices d
+       LEFT JOIN attendance_connectors c ON c.id = d.connector_id
+       WHERE d.hospital_id=$1 ORDER BY d.last_heartbeat_at DESC NULLS LAST`,
+      [hospitalId]
+    );
+    return res.rows;
+  }
+
+  public async updateConnectorSyncState(connectorId: string, state: any): Promise<void> {
+    if (useMockDb) {
+      const idx = mockDb.attendance_connectors.findIndex(c => c.id === connectorId);
+      if (idx >= 0) Object.assign(mockDb.attendance_connectors[idx], state);
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `UPDATE attendance_connectors
+       SET last_sync_at=$1, last_sync_status=$2, last_error=$3, records_synced=records_synced+$4, updated_at=NOW()
+       WHERE id=$5`,
+      [state.last_sync_at, state.last_sync_status, state.last_error, state.records_synced ?? 0, connectorId]
+    );
   }
 }

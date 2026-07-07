@@ -27,6 +27,7 @@ import emergencyRouter from "../src/routes/emergency";
 import patientPortalRouter from "../src/routes/patient_portal";
 import superAdminRouter from "../src/routes/super_admin";
 import payrollRouter from "../src/routes/payroll";
+import attendanceRouter from "../src/routes/attendance_integration";
 
 // Normalize default export vs named router object
 const getRouterObj = (r: any) => {
@@ -44,6 +45,7 @@ const emergencyRouterObj = getRouterObj(emergencyRouter);
 const patientPortalRouterObj = getRouterObj(patientPortalRouter);
 const superAdminRouterObj = getRouterObj(superAdminRouter);
 const payrollRouterObj = getRouterObj(payrollRouter);
+const attendanceRouterObj = getRouterObj(attendanceRouter);
 
 // ✅ Register routes ONLY if they loaded successfully
 if (patientRouterObj) app.use("/api/v1", patientRouterObj);
@@ -56,6 +58,11 @@ if (emergencyRouterObj) app.use("/api/v1", emergencyRouterObj);
 if (patientPortalRouterObj) app.use("/api/v1", patientPortalRouterObj);
 if (superAdminRouterObj) app.use("/api/v1", superAdminRouterObj);
 if (payrollRouterObj) app.use("/api/v1", payrollRouterObj);
+// Attendance: ZKTeco PUSH lives at /iclock; management APIs live at /api/v1
+if (attendanceRouterObj) {
+  app.use("/", attendanceRouterObj);  // mounts /iclock/cdata etc.
+  app.use("/api/v1", attendanceRouterObj); // mounts /api/v1/attendance/*
+}
 
 // Serve built frontend static files
 const frontendDist = path.join(__dirname, "../frontend/dist");
