@@ -80,7 +80,7 @@ router.get("/patient-portal/treatments", authMiddleware, async (req: Request, re
 
         // Fetch currently active nursing staff in the same department (ICU/ER/General)
         const shifts = await repo.getShifts();
-        const activeShifts = shifts.filter(s => s.status === "scheduled" || s.status === "completed");
+        const activeShifts = shifts.filter(s => (s as any).status === "scheduled" || (s as any).status === "completed");
         
         activeShifts.forEach(shift => {
           const staff = staffList.find(st => st.id === shift.staff_member_id);
@@ -118,10 +118,13 @@ Vitals: ${JSON.stringify(p.vitals || {})}`;
             dietPlan = data.choices?.[0]?.message?.content || "Regular soft diet. Limit sodium, stay hydrated.";
             
             // Save it back to db so we don't regenerate repeatedly
-            await repo.updatePatientDietPlan(p.id, dietPlan);
+            await repo.updatePatientDietPlan(p.id, dietPlan as string);
           } catch {
             dietPlan = "Standard clinical diet: Low sodium, balanced hydration, soft foods.";
           }
+        } else {
+          // ensure it has type string to satisfy typescript compiler
+          dietPlan = dietPlan as string;
         }
 
         activeTreatments.push({

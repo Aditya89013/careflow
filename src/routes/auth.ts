@@ -426,8 +426,7 @@ router.get("/auth/me", authMiddleware, async (req: Request, res: Response) => {
 
 // Helper function to print development logs cleanly without CP1252/terminal failures
 function printDevLog(msg: string) {
-  const clean = msg.encode ? msg.encode("ascii", { errors: "ignore" }).decode("ascii") : msg;
-  console.log(clean);
+  console.log(msg);
 }
 
 export default router;

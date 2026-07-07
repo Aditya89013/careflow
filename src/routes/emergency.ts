@@ -21,7 +21,7 @@ router.post("/emergency/find-hospitals", async (req: Request, res: Response) => 
     const hospitals = await mainRepo.getHospitals();
 
     // Query resource capacities for each hospital
-    const hospitalCapacities = [];
+    const hospitalCapacities: any[] = [];
     for (const hosp of hospitals) {
       const repo = new SqlHospitalRepository(hosp.id);
       const beds = await repo.getBeds();

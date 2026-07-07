@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { PayrollTab } from "./PayrollTab";
 
 export const AdminDashboard: React.FC = () => {
   const { token, logout, user, employeeRegister, employeeConfirmOtp } = useAuth();
   
-  // Tabs: "inventory" | "add_employee" | "emergencies" | "ai_allocator" | "logs"
-  const [activeTab, setActiveTab] = useState<"inventory" | "add_employee" | "emergencies" | "ai_allocator" | "logs">("inventory");
+  // Tabs: "inventory" | "add_employee" | "emergencies" | "ai_allocator" | "logs" | "payroll"
+  const [activeTab, setActiveTab] = useState<"inventory" | "add_employee" | "emergencies" | "ai_allocator" | "logs" | "payroll">("inventory");
   
   // Data State
   const [beds, setBeds] = useState<any[]>([]);
@@ -326,6 +327,14 @@ export const AdminDashboard: React.FC = () => {
           }`}
         >
           AI Resource Advisor
+        </button>
+        <button
+          onClick={() => { setActiveTab("payroll"); resetMessages(); }}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
+            activeTab === "payroll" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Payroll Run
         </button>
         <button
           onClick={() => { setActiveTab("logs"); resetMessages(); }}
@@ -810,6 +819,13 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
         </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 6. SHIFT TRACKING & PAYROLL INTEGRATION                  */}
+      {/* ======================================================== */}
+      {activeTab === "payroll" && (
+        <PayrollTab />
       )}
 
     </div>

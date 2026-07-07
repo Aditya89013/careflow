@@ -35,6 +35,9 @@ export interface MockDbSchema {
   universal_patients: UniversalPatient[];
   emergency_requests: any[];
   otp_verifications: any[];
+  staff_contracts: any[];
+  payroll_runs: any[];
+  payroll_records: any[];
 }
 
 // Load OSM Delhi hospitals
@@ -216,7 +219,21 @@ export const mockDb: MockDbSchema = {
     }
   ],
   emergency_requests: [],
-  otp_verifications: []
+  otp_verifications: [],
+  staff_contracts: [
+    { id: "c1", staff_member_id: "s1", hourly_rate: 60.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c2", staff_member_id: "s2", hourly_rate: 28.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-rep", staff_member_id: "s-receptionist", hourly_rate: 22.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-doc", staff_member_id: "s-doctor", hourly_rate: 55.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-nur", staff_member_id: "s-nurse", hourly_rate: 32.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-wb", staff_member_id: "s-wardboy", hourly_rate: 18.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-lt", staff_member_id: "s-labtech", hourly_rate: 24.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-ph", staff_member_id: "s-pharmacist", hourly_rate: 26.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-md", staff_member_id: "s-md", hourly_rate: 75.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 },
+    { id: "c-adm", staff_member_id: "s-admin", hourly_rate: 30.00, overtime_multiplier: 1.5, weekly_hours_limit: 40 }
+  ],
+  payroll_runs: [],
+  payroll_records: []
 };
 
 // Database Query Executer
@@ -953,5 +970,111 @@ export class SqlHospitalRepository implements HospitalRepository {
       created.push(res.rows[0]);
     }
     return created;
+  }
+
+  public async getStaffContract(staffId: string): Promise<any | null> {
+    if (useMockDb) {
+      const contract = mockDb.staff_contracts.find(c => c.staff_member_id === staffId);
+      return contract || null;
+    }
+    const res = await executeQuery(this.hospitalId,
+      "SELECT * FROM staff_contracts WHERE staff_member_id = $1",
+      [staffId]
+    );
+    return res.rows[0] || null;
+  }
+
+  public async upsertStaffContract(contract: any): Promise<void> {
+    if (useMockDb) {
+      const existingIdx = mockDb.staff_contracts.findIndex(c => c.staff_member_id === contract.staff_member_id);
+      if (existingIdx !== -1) {
+        mockDb.staff_contracts[existingIdx] = { ...mockDb.staff_contracts[existingIdx], ...contract };
+      } else {
+        mockDb.staff_contracts.push({ id: `c-${Date.now()}`, ...contract });
+      }
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `INSERT INTO staff_contracts (staff_member_id, hourly_rate, overtime_multiplier, weekly_hours_limit)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (staff_member_id) DO UPDATE SET
+         hourly_rate = EXCLUDED.hourly_rate,
+         overtime_multiplier = EXCLUDED.overtime_multiplier,
+         weekly_hours_limit = EXCLUDED.weekly_hours_limit,
+         updated_at = CURRENT_TIMESTAMP`,
+      [contract.staff_member_id, contract.hourly_rate, contract.overtime_multiplier || 1.5, contract.weekly_hours_limit || 40]
+    );
+  }
+
+  public async getShiftHistoriesForPeriod(startDate: string, endDate: string): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.shift_histories.filter(sh => 
+        sh.hospital_id === this.hospitalId &&
+        sh.worked_date >= startDate &&
+        sh.worked_date <= endDate
+      );
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM shift_histories 
+       WHERE hospital_id = $1 AND worked_date >= $2 AND worked_date <= $3
+       ORDER BY worked_date ASC`,
+      [this.hospitalId, startDate, endDate]
+    );
+    return res.rows;
+  }
+
+  public async savePayrollRun(run: any, records: any[]): Promise<any> {
+    const runId = run.id || `run-${Date.now()}`;
+    if (useMockDb) {
+      const dbRun = {
+        id: runId,
+        start_date: run.start_date,
+        end_date: run.end_date,
+        processed_at: new Date().toISOString(),
+        total_amount: run.total_amount,
+        status: run.status || "completed"
+      };
+      mockDb.payroll_runs.push(dbRun);
+
+      records.forEach(r => {
+        mockDb.payroll_records.push({
+          id: `rec-${Date.now()}-${Math.random()}`,
+          payroll_run_id: runId,
+          staff_member_id: r.staff_member_id,
+          base_hours: r.base_hours,
+          overtime_hours: r.overtime_hours,
+          base_pay: r.base_pay,
+          overtime_pay: r.overtime_pay,
+          net_pay: r.net_pay,
+          created_at: new Date().toISOString()
+        });
+      });
+      return dbRun;
+    }
+
+    const runRes = await executeQuery(this.hospitalId,
+      `INSERT INTO payroll_runs (id, start_date, end_date, total_amount, status)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [runId, run.start_date, run.end_date, run.total_amount, run.status || "completed"]
+    );
+
+    for (const r of records) {
+      await executeQuery(this.hospitalId,
+        `INSERT INTO payroll_records (payroll_run_id, staff_member_id, base_hours, overtime_hours, base_pay, overtime_pay, net_pay)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [runId, r.staff_member_id, r.base_hours, r.overtime_hours, r.base_pay, r.overtime_pay, r.net_pay]
+      );
+    }
+    return runRes.rows[0];
+  }
+
+  public async getPayrollHistory(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.payroll_runs.sort((a, b) => b.processed_at.localeCompare(a.processed_at));
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM payroll_runs ORDER BY processed_at DESC`
+    );
+    return res.rows;
   }
 }

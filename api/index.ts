@@ -26,6 +26,7 @@ import clinicalRouter from "../src/routes/clinical";
 import emergencyRouter from "../src/routes/emergency";
 import patientPortalRouter from "../src/routes/patient_portal";
 import superAdminRouter from "../src/routes/super_admin";
+import payrollRouter from "../src/routes/payroll";
 
 // Normalize default export vs named router object
 const getRouterObj = (r: any) => {
@@ -42,6 +43,7 @@ const clinicalRouterObj = getRouterObj(clinicalRouter);
 const emergencyRouterObj = getRouterObj(emergencyRouter);
 const patientPortalRouterObj = getRouterObj(patientPortalRouter);
 const superAdminRouterObj = getRouterObj(superAdminRouter);
+const payrollRouterObj = getRouterObj(payrollRouter);
 
 // ✅ Register routes ONLY if they loaded successfully
 if (patientRouterObj) app.use("/api/v1", patientRouterObj);
@@ -53,6 +55,7 @@ if (clinicalRouterObj) app.use("/api/v1", clinicalRouterObj);
 if (emergencyRouterObj) app.use("/api/v1", emergencyRouterObj);
 if (patientPortalRouterObj) app.use("/api/v1", patientPortalRouterObj);
 if (superAdminRouterObj) app.use("/api/v1", superAdminRouterObj);
+if (payrollRouterObj) app.use("/api/v1", payrollRouterObj);
 
 // Serve built frontend static files
 const frontendDist = path.join(__dirname, "../frontend/dist");
