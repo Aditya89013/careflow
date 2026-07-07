@@ -20,8 +20,8 @@
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:screenOrientation="userLandscape">
-            <!-- Bedside charts are best rendered in landscape orientation -->
+            android:screenOrientation="portrait">
+            <!-- Bedside charts are best rendered in portrait orientation -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

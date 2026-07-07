@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key_12983719";
 export interface AuthenticatedUser {
   userId: string;
   hospitalId: string;
-  role: StaffRole | "patient";
+  role: StaffRole | "patient" | "super_admin";
   name: string;
   upid?: string;
 }

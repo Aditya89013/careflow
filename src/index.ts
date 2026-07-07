@@ -13,6 +13,7 @@ import authRouter from "./routes/auth";
 import clinicalRouter from "./routes/clinical";
 import emergencyRouter from "./routes/emergency";
 import patientPortalRouter from "./routes/patient_portal";
+import superAdminRouter from "./routes/super_admin";
 import { subscriptions } from "./ws_events";
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use("/api/v1", authRouter);
 app.use("/api/v1", clinicalRouter);
 app.use("/api/v1", emergencyRouter);
 app.use("/api/v1", patientPortalRouter);
+app.use("/api/v1", superAdminRouter);
 
 // Set up server
 const server = http.createServer(app);

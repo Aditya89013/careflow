@@ -7,10 +7,10 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const { login, patientLogin, patientRegister, hospitalOwnerRegister, hospitalOwnerVerifyOtp } = useAuth();
+  const { login, patientLogin, hospitalOwnerRegister, hospitalOwnerVerifyOtp } = useAuth();
   
-  // Tabs: "staff_login" | "patient_login" | "patient_register" | "owner_register"
-  const [activeTab, setActiveTab] = useState<"staff_login" | "patient_login" | "patient_register" | "owner_register">("staff_login");
+  // Tabs: "staff_login" | "patient_login" | "owner_register"
+  const [activeTab, setActiveTab] = useState<"staff_login" | "patient_login" | "owner_register">("staff_login");
   
   // Staff Login Fields
   const [email, setEmail] = useState("");
@@ -22,18 +22,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [patientUpid, setPatientUpid] = useState("");
   const [patientPin, setPatientPin] = useState("");
   const [useLegacyLogin, setUseLegacyLogin] = useState(false);
-
-  // Patient Registration Fields
-  const [pFirstName, setPFirstName] = useState("");
-  const [pLastName, setPLastName] = useState("");
-  const [pDob, setPDob] = useState("");
-  const [pGender, setPGender] = useState("Male");
-  const [pBlood, setPBlood] = useState("O_positive");
-  const [pPhone, setPPhone] = useState("");
-  const [pEmail, setPEmail] = useState("");
-  const [pPassword, setPPassword] = useState("");
-  const [pEmergencyName, setPEmergencyName] = useState("");
-  const [pEmergencyPhone, setPEmergencyPhone] = useState("");
 
   // Hospital Owner Registration Fields
   const [hospName, setHospName] = useState("");
@@ -113,41 +101,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handlePatientRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    resetState();
-    setLoading(true);
-
-    const payload = {
-      first_name: pFirstName,
-      last_name: pLastName,
-      date_of_birth: pDob,
-      gender: pGender,
-      blood_group: pBlood,
-      phone: pPhone,
-      email: pEmail,
-      password: pPassword,
-      emergency_contact_name: pEmergencyName,
-      emergency_contact_phone: pEmergencyPhone
-    };
-
-    try {
-      const success = await patientRegister(payload);
-      if (success) {
-        setSuccessMsg("Patient registration completed! Please login in the Patient Login tab.");
-        setActiveTab("patient_login");
-        // Pre-fill email
-        setPatientEmail(pEmail);
-      } else {
-        setError("Registration failed. Email might already be registered.");
-      }
-    } catch {
-      setError("An unexpected error occurred during patient registration");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleOwnerRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     resetState();
@@ -215,7 +168,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Tab Controls */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-50 border border-slate-200 rounded-lg mb-6">
+        <div className="grid grid-cols-3 gap-1 p-1 bg-slate-50 border border-slate-200 rounded-lg mb-6">
           <button
             onClick={() => { setActiveTab("staff_login"); resetState(); }}
             className={`py-2 text-[10px] font-bold rounded transition-all ${
@@ -231,14 +184,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             }`}
           >
             Patient Login
-          </button>
-          <button
-            onClick={() => { setActiveTab("patient_register"); resetState(); }}
-            className={`py-2 text-[10px] font-bold rounded transition-all ${
-              activeTab === "patient_register" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900"
-            }`}
-          >
-            Patient Register
           </button>
           <button
             onClick={() => { setActiveTab("owner_register"); resetState(); }}
@@ -372,150 +317,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-bold tracking-wider uppercase transition-all"
             >
               {loading ? "Logging in..." : "Access Patient Portal"}
-            </button>
-          </form>
-        )}
-
-        {/* ======================================================== */}
-        {/* 3. PATIENT REGISTRATION FORM                             */}
-        {/* ======================================================== */}
-        {activeTab === "patient_register" && (
-          <form onSubmit={handlePatientRegister} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">First Name</label>
-                <input
-                  type="text"
-                  required
-                  value={pFirstName}
-                  onChange={(e) => setPFirstName(e.target.value)}
-                  placeholder="John"
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Last Name</label>
-                <input
-                  type="text"
-                  required
-                  value={pLastName}
-                  onChange={(e) => setPLastName(e.target.value)}
-                  placeholder="Doe"
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Date of Birth</label>
-                <input
-                  type="date"
-                  required
-                  value={pDob}
-                  onChange={(e) => setPDob(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Gender</label>
-                <select
-                  value={pGender}
-                  onChange={(e) => setPGender(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Blood Group</label>
-                <select
-                  value={pBlood}
-                  onChange={(e) => setPBlood(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                >
-                  <option value="O_positive">O+</option>
-                  <option value="O_negative">O-</option>
-                  <option value="A_positive">A+</option>
-                  <option value="A_negative">A-</option>
-                  <option value="B_positive">B+</option>
-                  <option value="B_negative">B-</option>
-                  <option value="AB_positive">AB+</option>
-                  <option value="AB_negative">AB-</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Phone Number</label>
-                <input
-                  type="text"
-                  required
-                  value={pPhone}
-                  onChange={(e) => setPPhone(e.target.value)}
-                  placeholder="555-0987"
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={pEmail}
-                  onChange={(e) => setPEmail(e.target.value)}
-                  placeholder="john.doe@gmail.com"
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Password</label>
-              <input
-                type="password"
-                required
-                value={pPassword}
-                onChange={(e) => setPPassword(e.target.value)}
-                placeholder="Enter password"
-                className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 mt-1">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Emergency Contact Name</label>
-                <input
-                  type="text"
-                  required
-                  value={pEmergencyName}
-                  onChange={(e) => setPEmergencyName(e.target.value)}
-                  placeholder="Jane Doe"
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Emergency Contact Phone</label>
-                <input
-                  type="text"
-                  required
-                  value={pEmergencyPhone}
-                  onChange={(e) => setPEmergencyPhone(e.target.value)}
-                  placeholder="555-5678"
-                  className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-bold tracking-wider uppercase transition-all mt-3"
-            >
-              {loading ? "Registering..." : "Create Patient Profile"}
             </button>
           </form>
         )}

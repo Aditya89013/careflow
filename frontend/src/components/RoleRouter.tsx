@@ -10,6 +10,7 @@ import { PharmacistDashboard } from "./dashboards/PharmacistDashboard";
 import { MDDashboard } from "./dashboards/MDDashboard";
 import { AdminDashboard } from "./dashboards/AdminDashboard";
 import { EmployeeDashboard } from "./dashboards/EmployeeDashboard";
+import { SuperAdminDashboard } from "./dashboards/SuperAdminDashboard";
 
 export const RoleRouter: React.FC = () => {
   const { user } = useAuth();
@@ -17,6 +18,10 @@ export const RoleRouter: React.FC = () => {
   if (!user) return null;
 
   switch (user.role) {
+    // ── Global System Admin ──────────────────────────────────────────────
+    case "super_admin":
+      return <SuperAdminDashboard />;
+
     // ── Customer Patient Portal ──────────────────────────────────────────
     case "patient":
       return <PatientDashboard />;
