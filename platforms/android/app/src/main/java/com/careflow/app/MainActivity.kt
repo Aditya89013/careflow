@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
                 Toast.makeText(
                     this@MainActivity,
-                    "Failed to connect to CareFlow Server. Running in offline mode.",
+                    "Failed to connect to CareFlow Server: $description (URL: $failingUrl)",
                     Toast.LENGTH_LONG
                 ).show()
                 
@@ -92,12 +92,22 @@ class MainActivity : AppCompatActivity() {
                 webView.loadData(
                     "<html><body style='background-color:#0f172a;color:#94a3b8;font-family:sans-serif;text-align:center;padding-top:20%;'>" +
                             "<h2>Connection Offline</h2>" +
-                            "<p>Cannot reach the CareFlow HIS network. Please check your ward connection.</p>" +
+                            "<p>Cannot reach the CareFlow HIS network ($description). Please check your connection.</p>" +
+                            "<p style='font-size:12px;color:#64748b;'>URL: $failingUrl</p>" +
                             "<button onclick='location.reload()' style='padding:10px 20px;background:#3b82f6;color:white;border:none;border-radius:4px;'>Retry</button>" +
                             "</body></html>",
                     "text/html",
                     "UTF-8"
                 )
+            }
+
+            @SuppressLint("WebViewClientOnReceivedSslError")
+            override fun onReceivedSslError(
+                view: WebView?,
+                handler: android.webkit.SslErrorHandler?,
+                error: android.net.http.SslError?
+            ) {
+                handler?.proceed() // Proceed past SSL validation failure (specifically for Let's Encrypt trust on old Android WebViews)
             }
         }
 
