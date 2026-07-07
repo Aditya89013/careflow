@@ -16,39 +16,43 @@ app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "healthy", timestamp: new Date() });
 });
 
-// 🔥 THE NUCLEAR FIX: Safely load routes using require() 
-// This completely bypasses Vercel's "undefined .default" compiler bug
-const loadRoute = (routePath: string) => {
-  try {
-    const routeModule = require(routePath);
-    // Return standard router, default export, or null if empty
-    return routeModule.default || routeModule.router || routeModule;
-  } catch (err) {
-    console.warn(`[WARN] Route load skipped for ${routePath}`);
-    return null; // Prevents crash if file is missing or empty
-  }
+// Static imports for routes so Vercel can trace/bundle dependencies correctly
+import patientRouter from "../src/routes/patients";
+import shiftRouter from "../src/routes/shifts";
+import publicRouter from "../src/routes/public";
+import chatbotRouter from "../src/routes/chatbot";
+import authRouter from "../src/routes/auth";
+import clinicalRouter from "../src/routes/clinical";
+import emergencyRouter from "../src/routes/emergency";
+import patientPortalRouter from "../src/routes/patient_portal";
+import superAdminRouter from "../src/routes/super_admin";
+
+// Normalize default export vs named router object
+const getRouterObj = (r: any) => {
+  if (!r) return null;
+  return r.default || r.router || r;
 };
 
-const patientRouter = loadRoute("../src/routes/patients");
-const shiftRouter = loadRoute("../src/routes/shifts");
-const publicRouter = loadRoute("../src/routes/public");
-const chatbotRouter = loadRoute("../src/routes/chatbot");
-const authRouter = loadRoute("../src/routes/auth");
-const clinicalRouter = loadRoute("../src/routes/clinical");
-const emergencyRouter = loadRoute("../src/routes/emergency");
-const patientPortalRouter = loadRoute("../src/routes/patient_portal");
-const superAdminRouter = loadRoute("../src/routes/super_admin");
+const patientRouterObj = getRouterObj(patientRouter);
+const shiftRouterObj = getRouterObj(shiftRouter);
+const publicRouterObj = getRouterObj(publicRouter);
+const chatbotRouterObj = getRouterObj(chatbotRouter);
+const authRouterObj = getRouterObj(authRouter);
+const clinicalRouterObj = getRouterObj(clinicalRouter);
+const emergencyRouterObj = getRouterObj(emergencyRouter);
+const patientPortalRouterObj = getRouterObj(patientPortalRouter);
+const superAdminRouterObj = getRouterObj(superAdminRouter);
 
 // ✅ Register routes ONLY if they loaded successfully
-if (patientRouter && typeof patientRouter === 'function') app.use("/api/v1", patientRouter);
-if (shiftRouter && typeof shiftRouter === 'function') app.use("/api/v1", shiftRouter);
-if (publicRouter && typeof publicRouter === 'function') app.use("/api/v1", publicRouter);
-if (chatbotRouter && typeof chatbotRouter === 'function') app.use("/api/v1", chatbotRouter);
-if (authRouter && typeof authRouter === 'function') app.use("/api/v1", authRouter);
-if (clinicalRouter && typeof clinicalRouter === 'function') app.use("/api/v1", clinicalRouter);
-if (emergencyRouter && typeof emergencyRouter === 'function') app.use("/api/v1", emergencyRouter);
-if (patientPortalRouter && typeof patientPortalRouter === 'function') app.use("/api/v1", patientPortalRouter);
-if (superAdminRouter && typeof superAdminRouter === 'function') app.use("/api/v1", superAdminRouter);
+if (patientRouterObj) app.use("/api/v1", patientRouterObj);
+if (shiftRouterObj) app.use("/api/v1", shiftRouterObj);
+if (publicRouterObj) app.use("/api/v1", publicRouterObj);
+if (chatbotRouterObj) app.use("/api/v1", chatbotRouterObj);
+if (authRouterObj) app.use("/api/v1", authRouterObj);
+if (clinicalRouterObj) app.use("/api/v1", clinicalRouterObj);
+if (emergencyRouterObj) app.use("/api/v1", emergencyRouterObj);
+if (patientPortalRouterObj) app.use("/api/v1", patientPortalRouterObj);
+if (superAdminRouterObj) app.use("/api/v1", superAdminRouterObj);
 
 // Serve built frontend static files
 const frontendDist = path.join(__dirname, "../frontend/dist");
