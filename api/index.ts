@@ -35,6 +35,8 @@ const publicRouter = loadRoute("../src/routes/public");
 const chatbotRouter = loadRoute("../src/routes/chatbot");
 const authRouter = loadRoute("../src/routes/auth");
 const clinicalRouter = loadRoute("../src/routes/clinical");
+const emergencyRouter = loadRoute("../src/routes/emergency");
+const patientPortalRouter = loadRoute("../src/routes/patient_portal");
 
 // ✅ Register routes ONLY if they loaded successfully
 if (patientRouter && typeof patientRouter === 'function') app.use("/api/v1", patientRouter);
@@ -43,6 +45,8 @@ if (publicRouter && typeof publicRouter === 'function') app.use("/api/v1", publi
 if (chatbotRouter && typeof chatbotRouter === 'function') app.use("/api/v1", chatbotRouter);
 if (authRouter && typeof authRouter === 'function') app.use("/api/v1", authRouter);
 if (clinicalRouter && typeof clinicalRouter === 'function') app.use("/api/v1", clinicalRouter);
+if (emergencyRouter && typeof emergencyRouter === 'function') app.use("/api/v1", emergencyRouter);
+if (patientPortalRouter && typeof patientPortalRouter === 'function') app.use("/api/v1", patientPortalRouter);
 
 // Serve built frontend static files
 const frontendDist = path.join(__dirname, "../frontend/dist");

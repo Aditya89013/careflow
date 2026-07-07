@@ -1,21 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #0b0f19;
-  --bg-secondary: #131a2d;
-  --bg-tertiary: #1e294b;
-  --accent-cyan: #06b6d4;
-  --accent-blue: #3b82f6;
-  --accent-urgent: #ef4444;
-  --accent-warning: #f59e0b;
-  --accent-safe: #10b981;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --shadow-glow: rgba(6, 182, 212, 0.15);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --accent-cyan: #0284c7;
+  --accent-blue: #2563eb;
+  --accent-urgent: #dc2626;
+  --accent-warning: #ea580c;
+  --accent-safe: #16a34a;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: #e2e8f0;
+  --shadow-glow: rgba(2, 132, 199, 0.03);
   
-  font-family: 'Outfit', sans-serif;
-  color-scheme: dark;
+  font-family: 'Inter', sans-serif;
+  color-scheme: light;
 }
 
 html {
@@ -97,7 +97,7 @@ textarea:focus-visible {
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
-  background: rgba(19, 26, 45, 0.85);
+  background: #ffffff;
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   z-index: 100;
@@ -119,8 +119,8 @@ textarea:focus-visible {
   font-size: 0.8rem;
   padding: 2px 8px;
   border-radius: 99px;
-  background: rgba(6, 182, 212, 0.15);
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: rgba(2, 132, 199, 0.05);
+  border: 1px solid rgba(2, 132, 199, 0.1);
   color: var(--accent-cyan);
   -webkit-text-fill-color: var(--accent-cyan);
 }
@@ -158,7 +158,7 @@ textarea:focus-visible {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: radial-gradient(circle at center, #1e294b 0%, #0b0f19 100%);
+  background: radial-gradient(circle at center, #f1f5f9 0%, #ffffff 100%);
   padding: 24px;
   overflow: auto;
 }
@@ -167,8 +167,8 @@ textarea:focus-visible {
   background: #000;
   border-radius: 36px;
   padding: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(6, 182, 212, 0.05);
-  border: 4px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(2, 132, 199, 0.02);
+  border: 4px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }
@@ -206,7 +206,7 @@ textarea:focus-visible {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: rgba(19, 26, 45, 0.6);
+  background: #f8fafc;
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-color);
 }
@@ -223,7 +223,7 @@ textarea:focus-visible {
 .app-nav {
   display: flex;
   gap: 4px;
-  background: rgba(11, 15, 25, 0.6);
+  background: #ffffff;
   padding: 4px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
@@ -268,7 +268,7 @@ textarea:focus-visible {
 
 /* Cards & Panels (Glassmorphism) */
 .glass-card {
-  background: rgba(30, 41, 75, 0.25);
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 20px;
@@ -284,7 +284,7 @@ textarea:focus-visible {
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(2, 132, 199, 0.1), transparent);
 }
 
 .card-title {
@@ -309,7 +309,7 @@ textarea:focus-visible {
   gap: 4px;
 }
 
-.badge-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+.badge-cyan { background: rgba(2, 132, 199, 0.05); color: var(--accent-cyan); border: 1px solid rgba(2, 132, 199, 0.1); }
 .badge-urgent { background: rgba(239, 68, 68, 0.15); color: var(--accent-urgent); border: 1px solid rgba(239, 68, 68, 0.3); }
 .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--accent-warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 .badge-safe { background: rgba(16, 185, 129, 0.15); color: var(--accent-safe); border: 1px solid rgba(16, 185, 129, 0.3); }
@@ -342,7 +342,7 @@ textarea:focus-visible {
 
 .ring-bg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: var(--bg-secondary);
   stroke-width: 8;
 }
 
@@ -390,7 +390,7 @@ textarea:focus-visible {
 .form-input:focus, .form-select:focus {
   border-color: var(--accent-cyan);
   outline: none;
-  box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+  box-shadow: 0 0 8px rgba(2, 132, 199, 0.08);
 }
 
 /* Table styling */
@@ -423,19 +423,19 @@ textarea:focus-visible {
   padding: 16px;
   margin-bottom: 12px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-secondary);
 }
 
 .recommendation-item:hover, .recommendation-item.selected {
   border-color: var(--accent-cyan);
-  background: rgba(6, 182, 212, 0.05);
+  background: rgba(2, 132, 199, 0.02);
 }
 
 /* Public Finder Map Mock */
 .mock-map {
   width: 100%;
   height: 300px;
-  background: radial-gradient(circle at center, #1b2640 0%, #0d1326 100%);
+  background: radial-gradient(circle at center, #e2e8f0 0%, #f8fafc 100%);
   border-radius: 16px;
   position: relative;
   overflow: hidden;

@@ -33,6 +33,8 @@ export interface MockDbSchema {
   inventory_items: any[];
   audit_logs: any[];
   universal_patients: UniversalPatient[];
+  emergency_requests: any[];
+  otp_verifications: any[];
 }
 
 // Load OSM Delhi hospitals
@@ -212,7 +214,9 @@ export const mockDb: MockDbSchema = {
         }
       ]
     }
-  ]
+  ],
+  emergency_requests: [],
+  otp_verifications: []
 };
 
 // Database Query Executer
@@ -706,5 +710,248 @@ export class SqlHospitalRepository implements HospitalRepository {
         patient.upid
       ]
     );
+  }
+
+  public async addStaffMember(staff: any): Promise<any> {
+    if (useMockDb) {
+      const dbStaff = { ...staff, hospital_id: this.hospitalId, is_active: true };
+      mockDb.staff_members.push(dbStaff);
+      return dbStaff;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO staff_members (id, hospital_id, auth_user_id, first_name, last_name, role, specialty, contact_number, email, password_hash, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true) RETURNING *`,
+      [staff.id, this.hospitalId, staff.auth_user_id, staff.first_name, staff.last_name, staff.role, staff.specialty, staff.contact_number || null, staff.email, staff.password_hash]
+    );
+    return res.rows[0];
+  }
+
+  public async getStaffByEmailOrId(idOrEmail: string): Promise<any | null> {
+    if (useMockDb) {
+      const staff = mockDb.staff_members.find(
+        s => (s.id.toLowerCase() === idOrEmail.toLowerCase() || s.email?.toLowerCase() === idOrEmail.toLowerCase()) && s.hospital_id === this.hospitalId
+      );
+      return staff || null;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM staff_members WHERE (id = $1 OR email = $1) AND hospital_id = $2 AND is_active = true`,
+      [idOrEmail, this.hospitalId]
+    );
+    return res.rows[0] || null;
+  }
+
+  public async getStaffByEmail(email: string): Promise<any | null> {
+    if (useMockDb) {
+      const staff = mockDb.staff_members.find(s => s.email?.toLowerCase() === email.toLowerCase());
+      return staff || null;
+    }
+    const res = await executeQuery("8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d",
+      `SELECT * FROM staff_members WHERE email = $1 AND is_active = true`,
+      [email]
+    );
+    return res.rows[0] || null;
+  }
+
+  public async addEmergencyRequest(req: any): Promise<any> {
+    if (useMockDb) {
+      const dbReq = { ...req, id: req.id || `erq-${Date.now()}`, hospital_id: this.hospitalId, status: "pending", created_at: new Date().toISOString() };
+      mockDb.emergency_requests.push(dbReq);
+      return dbReq;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO emergency_requests (id, hospital_id, patient_name, phone, symptoms, ward_required, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
+      [req.id || `erq-${Date.now()}`, this.hospitalId, req.patient_name, req.phone, req.symptoms, req.ward_required]
+    );
+    return res.rows[0];
+  }
+
+  public async getEmergencyRequests(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.emergency_requests.filter(r => r.hospital_id === this.hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM emergency_requests WHERE hospital_id = $1 ORDER BY created_at DESC`,
+      [this.hospitalId]
+    );
+    return res.rows;
+  }
+
+  public async updateEmergencyRequestStatus(id: string, status: string): Promise<void> {
+    if (useMockDb) {
+      const req = mockDb.emergency_requests.find(r => r.id === id);
+      if (req) req.status = status;
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `UPDATE emergency_requests SET status = $1 WHERE id = $2`,
+      [status, id]
+    );
+  }
+
+  public async getUniversalPatientByEmail(email: string): Promise<UniversalPatient | null> {
+    if (useMockDb) {
+      const patient = mockDb.universal_patients.find(p => p.email?.toLowerCase() === email.toLowerCase());
+      return patient || null;
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM universal_patients WHERE email = $1", [email]);
+    if (res.rows.length === 0) return null;
+    const row = res.rows[0];
+    return {
+      ...row,
+      allergies: typeof row.allergies === "string" ? JSON.parse(row.allergies) : row.allergies,
+      chronic_conditions: typeof row.chronic_conditions === "string" ? JSON.parse(row.chronic_conditions) : row.chronic_conditions,
+      current_medications: typeof row.current_medications === "string" ? JSON.parse(row.current_medications) : row.current_medications,
+      admission_history: typeof row.admission_history === "string" ? JSON.parse(row.admission_history) : row.admission_history
+    };
+  }
+
+  public async addHospital(hosp: any): Promise<any> {
+    if (useMockDb) {
+      const dbHosp = { ...hosp, id: hosp.id || `hosp-${Date.now()}` };
+      mockDb.hospitals.push(dbHosp);
+      return dbHosp;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO hospitals (id, name, latitude, longitude, address, contact_phone)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [hosp.id || `hosp-${Date.now()}`, hosp.name, hosp.latitude || 28.6139, hosp.longitude || 77.2090, hosp.address || "New Delhi", hosp.contact_phone || "555-0199"]
+    );
+    return res.rows[0];
+  }
+
+  public async saveOtp(email: string, otp: string, purpose: string, payload?: any): Promise<void> {
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    if (useMockDb) {
+      mockDb.otp_verifications = mockDb.otp_verifications.filter(o => !(o.email === email && o.purpose === purpose));
+      mockDb.otp_verifications.push({
+        id: `otp-${Date.now()}`,
+        email,
+        otp,
+        purpose,
+        payload,
+        expires_at: expiresAt
+      });
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `DELETE FROM otp_verifications WHERE email = $1 AND purpose = $2`,
+      [email, purpose]
+    );
+    await executeQuery(this.hospitalId,
+      `INSERT INTO otp_verifications (email, otp, purpose, payload, expires_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [email, otp, purpose, JSON.stringify(payload), expiresAt]
+    );
+  }
+
+  public async verifyOtp(email: string, otp: string, purpose: string): Promise<any | null> {
+    const now = new Date().toISOString();
+    if (useMockDb) {
+      const idx = mockDb.otp_verifications.findIndex(
+        o => o.email === email && o.otp === otp && o.purpose === purpose && new Date(o.expires_at) > new Date()
+      );
+      if (idx === -1) return null;
+      const record = mockDb.otp_verifications[idx];
+      mockDb.otp_verifications.splice(idx, 1);
+      return record.payload || {};
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT * FROM otp_verifications WHERE email = $1 AND otp = $2 AND purpose = $3 AND expires_at > $4`,
+      [email, otp, purpose, now]
+    );
+    if (res.rows.length === 0) return null;
+    const row = res.rows[0];
+    await executeQuery(this.hospitalId,
+      `DELETE FROM otp_verifications WHERE id = $1`,
+      [row.id]
+    );
+    return typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload;
+  }
+
+  public async getPatientsByRelativeContact(phoneOrEmailOrName: string): Promise<any[]> {
+    if (useMockDb) {
+      const matchingUpids = mockDb.universal_patients.filter(
+        p => p.phone === phoneOrEmailOrName || 
+             p.email?.toLowerCase() === phoneOrEmailOrName.toLowerCase() ||
+             p.emergency_contact_phone === phoneOrEmailOrName ||
+             `${p.first_name} ${p.last_name}`.toLowerCase().includes(phoneOrEmailOrName.toLowerCase())
+      ).map(p => p.upid);
+
+      return mockDb.patients.filter(p => p.upid && matchingUpids.includes(p.upid));
+    }
+    const res = await executeQuery(this.hospitalId,
+      `SELECT p.* FROM patients p
+       JOIN universal_patients up ON p.upid = up.upid
+       WHERE up.phone = $1 OR up.email = $1 OR up.emergency_contact_phone = $1 OR (up.first_name || ' ' || up.last_name) ILIKE $2`,
+      [phoneOrEmailOrName, `%${phoneOrEmailOrName}%`]
+    );
+    return res.rows;
+  }
+
+  public async updatePatientDietPlan(patientId: string, dietPlan: string): Promise<void> {
+    if (useMockDb) {
+      const patient = mockDb.patients.find(p => p.id === patientId);
+      if (patient) patient.diet_plan = dietPlan;
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `UPDATE patients SET diet_plan = $1 WHERE id = $2`,
+      [dietPlan, patientId]
+    );
+  }
+
+  public async addBed(bed: any): Promise<any> {
+    if (useMockDb) {
+      const dbBed = { ...bed, hospital_id: this.hospitalId, status: bed.status || "free" };
+      mockDb.beds.push(dbBed);
+      return dbBed;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO beds (id, hospital_id, department_id, bed_number, status, type)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [bed.id, this.hospitalId, bed.department_id, bed.bed_number, bed.status || "free", bed.type || "general"]
+    );
+    return res.rows[0];
+  }
+
+  public async addVentilator(vent: any): Promise<any> {
+    if (useMockDb) {
+      const dbVent = { ...vent, hospital_id: this.hospitalId, status: vent.status || "available" };
+      mockDb.ventilators.push(dbVent);
+      return dbVent;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO ventilators (id, hospital_id, department_id, serial_number, status, type)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [vent.id, this.hospitalId, vent.department_id, vent.serial_number, vent.status || "available", vent.type || "invasive"]
+    );
+    return res.rows[0];
+  }
+
+  public async createDefaultDepartments(): Promise<any[]> {
+    const depts = [
+      { id: `dept-icu-${this.hospitalId}`, name: "Intensive Care Unit", code: "ICU" },
+      { id: `dept-er-${this.hospitalId}`, name: "Emergency Room", code: "ER" }
+    ];
+    if (useMockDb) {
+      depts.forEach(d => {
+        if (!mockDb.departments.some(existing => existing.id === d.id)) {
+          mockDb.departments.push({ ...d, hospital_id: this.hospitalId });
+        }
+      });
+      return depts;
+    }
+    const created = [];
+    for (const d of depts) {
+      const res = await executeQuery(this.hospitalId,
+        `INSERT INTO departments (id, hospital_id, name, code)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (hospital_id, code) DO UPDATE SET name = EXCLUDED.name RETURNING *`,
+        [d.id, this.hospitalId, d.name, d.code]
+      );
+      created.push(res.rows[0]);
+    }
+    return created;
   }
 }

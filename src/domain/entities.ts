@@ -81,6 +81,9 @@ export interface UniversalPatient {
   insurance_policy_number?: string;
   // History across all hospitals
   admission_history: AdmissionRecord[];
+  // New auth columns
+  email?: string;
+  password_hash?: string;
 }
 
 export interface Patient {
@@ -95,6 +98,7 @@ export interface Patient {
   admitted_at: string;
   vitals?: PatientVitals;
   status?: string;
+  diet_plan?: string;
 }
 
 export interface Allocation {

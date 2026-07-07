@@ -16,7 +16,7 @@ const OPENROUTER_KEYS = [
   process.env.OPENROUTER_KEY_4
 ].filter(Boolean) as string[];
 let currentKeyIndex = 0;
-async function callOpenRouterWithFallback(payload: any): Promise<any> {
+export async function callOpenRouterWithFallback(payload: any): Promise<any> {
   if (OPENROUTER_KEYS.length === 0) {
     throw new Error("No OpenRouter API keys configured in environment variables.");
   }
@@ -235,3 +235,219 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
     return res.status(500).json({ error: "Failed to process chat system routine", details: err.message });
   }
 });
+
+async function dispatch(
+  name: string,
+  args: Record<string, any>,
+  repo: SqlHospitalRepository,
+  allocationService: AllocationService,
+  schedulingService: SchedulingService,
+  hospitalId: string
+): Promise<any> {
+  console.log(`[CareFlow Agent] Executing tool "${name}"`, args);
+
+  switch (name) {
+    // ── admitPatient ──────────────────────────────────────────────
+    case "admitPatient": {
+      const patient = await repo.addPatient({
+        id:                       `p-${Date.now()}`,
+        first_name:               args.first_name ?? "EMS",
+        last_name:                args.last_name  ?? "Intake",
+        date_of_birth:            args.date_of_birth ?? "1990-01-01",
+        triage_level:             args.triage_level  ?? "2_emergent",
+        required_department_code: args.required_department_code ?? "general",
+        needs_ventilator:         Boolean(args.needs_ventilator),
+        admitted_at:              new Date().toISOString(),
+        vitals: {
+          hr:                args.hr   ?? "80",
+          bp:                args.bp   ?? "120/80",
+          o2:                args.o2   ?? "98%",
+          oxygenation_source: args.oxygenation_source ?? "SpO2",
+          is_delirious:      Boolean(args.is_delirious)
+        }
+      });
+
+      await repo.addAuditEvent({
+        id:         `al-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        action:     "PATIENT_INTAKE",
+        payload_after: patient
+      });
+
+      broadcastHospitalEvent(hospitalId, { type: "PATIENT_INTAKE", patient });
+      return patient;
+    }
+
+    // ── getAllocationRecommendations ──────────────────────────────
+    case "getAllocationRecommendations": {
+      let patientId = args.patient_id as string;
+
+      if (patientId === "last_patient") {
+        const patients = await repo.getPatients();
+        patientId = patients[patients.length - 1]?.id ?? "";
+      }
+
+      if (!patientId) throw new Error("No patients in the system yet.");
+
+      const recommendations = await allocationService.getRecommendations(patientId);
+      return { patient_id: patientId, recommendations };
+    }
+
+    // ── confirmAllocation ─────────────────────────────────────────
+    case "confirmAllocation": {
+      let patientId = args.patient_id as string;
+
+      if (patientId === "last_patient") {
+        const patients = await repo.getPatients();
+        patientId = patients[patients.length - 1]?.id ?? "";
+      }
+
+      if (!patientId) throw new Error("No patients in the system yet.");
+
+      if (args.is_override && !args.override_reason) {
+        throw new Error("override_reason is required when is_override is true.");
+      }
+
+      const allocation = await repo.addAllocation({
+        id:                `a-${Date.now()}`,
+        patient_id:        patientId,
+        bed_id:            args.bed_id,
+        ventilator_id:     args.ventilator_id,
+        primary_doctor_id: args.primary_doctor_id,
+        is_override:       Boolean(args.is_override),
+        override_reason:   args.override_reason ?? undefined,
+        allocated_at:      new Date().toISOString()
+      });
+
+      await repo.addAuditEvent({
+        id:         `al-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        action:     args.is_override ? "MANUAL_OVERRIDE_ALLOCATION" : "RECOMMENDED_ALLOCATION",
+        payload_after: allocation
+      });
+
+      broadcastHospitalEvent(hospitalId, { type: "RESOURCE_ALLOCATION", allocation });
+      return allocation;
+    }
+
+    // ── generateShifts ────────────────────────────────────────────
+    case "generateShifts": {
+      const startDate = args.start_date as string;
+      const endDate   = args.end_date   as string;
+
+      const generated = await schedulingService.generateShiftSchedule(startDate, endDate);
+      const saved     = await repo.addShifts(generated);
+
+      await repo.addAuditEvent({
+        id:         `al-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        action:     "SCHEDULE_GENERATED",
+        payload_after: { count: saved.length, start_date: startDate, end_date: endDate }
+      });
+
+      broadcastHospitalEvent(hospitalId, { type: "SCHEDULE_GENERATED", count: saved.length });
+      return { start_date: startDate, end_date: endDate, shifts: saved };
+    }
+
+    // ── getHospitalStatus ─────────────────────────────────────────
+    case "getHospitalStatus": {
+      const [patients, beds, ventilators, staff] = await Promise.all([
+        repo.getPatients(),
+        repo.getBeds(),
+        repo.getVentilators(),
+        repo.getStaff()
+      ]);
+
+      return {
+        total_beds:      beds.length,
+        occupied_beds:   beds.filter(b => b.status === "occupied").length,
+        free_beds:       beds.filter(b => b.status === "free").length,
+        total_vents:     ventilators.length,
+        available_vents: ventilators.filter(v => v.status === "available").length,
+        total_patients:  patients.length,
+        waiting_patients: patients.filter(p => !p.status || p.status === "admitted" || p.status === "waiting").length,
+        allocated_patients: patients.filter(p => p.status === "allocated").length,
+        staff_count:     staff.length
+      };
+    }
+
+    default:
+      throw new Error(`Unknown tool: "${name}"`);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Rich markdown response builder for local-fallback replies
+// ──────────────────────────────────────────────────────────────────
+function buildReply(toolName: string, result: any): string {
+  switch (toolName) {
+    case "admitPatient":
+      return `✅ **Patient Admitted**
+
+| Field | Value |
+|-------|-------|
+| **ID** | \`${result.id}\` |
+| **Name** | ${result.first_name} ${result.last_name} |
+| **Triage Level** | ${result.triage_level} |
+| **Department** | ${result.required_department_code} |
+| **Ventilator needed** | ${result.needs_ventilator ? "Yes" : "No"} |
+| **Admitted at** | ${new Date(result.admitted_at).toLocaleString()} |
+| **Vitals** | HR: ${result.vitals?.hr} bpm · BP: ${result.vitals?.bp} mmHg · O₂: ${result.vitals?.o2} (${result.vitals?.oxygenation_source}) |
+
+The patient has been registered and is queued for resource allocation.`;
+
+    case "getAllocationRecommendations": {
+      const recs = result.recommendations ?? [];
+      if (!recs.length) return "⚠️ No matching beds found. All beds may be occupied or no suitable clinicians are available.";
+
+      const rows = recs
+        .map((r: any, i: number) =>
+          `**${i + 1}. Bed ${r.bedNumber}** (Score: ${r.score}%) · Dr. ${r.staffName}\n${r.reasoning.map((ln: string) => `   - ${ln}`).join("\n")}`
+        )
+        .join("\n\n");
+
+      return `🔬 **SOFA-2 Allocation Recommendations** for patient \`${result.patient_id}\`\n\n${rows}\n\n*Use "confirm allocation" with your chosen bed and physician to proceed.*`;
+    }
+
+    case "confirmAllocation":
+      return `✅ **Allocation Confirmed**
+
+| Field | Value |
+|-------|-------|
+| **Allocation ID** | \`${result.id}\` |
+| **Patient** | \`${result.patient_id}\` |
+| **Bed** | \`${result.bed_id}\` |
+| **Physician** | \`${result.primary_doctor_id}\` |
+| **Override** | ${result.is_override ? `Yes — ${result.override_reason}` : "No (recommended)"} |
+
+Bed status set to **occupied**. WebSocket event broadcast to all connected dashboards.`;
+
+    case "generateShifts":
+      return `📅 **Shift Schedule Generated**
+
+| Field | Value |
+|-------|-------|
+| **Date Range** | ${result.start_date} → ${result.end_date} |
+| **Total Shifts** | ${result.shifts.length} |
+
+All shifts follow circadian **forward rotation** (Day → Night), enforcing minimum 12-hour rest windows and preventing clopening fatigue.`;
+
+    case "getHospitalStatus":
+      return `📊 **Hospital Real-Time Status**
+
+| Metric | Value |
+|--------|-------|
+| 🛏 Total Beds | ${result.total_beds} |
+| 🟢 Free Beds | ${result.free_beds} |
+| 🔴 Occupied Beds | ${result.occupied_beds} |
+| 🫁 Available Ventilators | ${result.available_vents} / ${result.total_vents} |
+| 🧑‍⚕️ Registered Staff | ${result.staff_count} |
+| ⏳ Waiting Patients | ${result.waiting_patients} |
+| ✅ Allocated Patients | ${result.allocated_patients} |`;
+
+    default:
+      return JSON.stringify(result, null, 2);
+  }
+}
+
+export default router;

@@ -7,6 +7,7 @@ export interface UserSession {
   email?: string;
   role: string;
   hospital_id: string;
+  hospital_name?: string;
   upid?: string;
 }
 
@@ -14,11 +15,17 @@ interface AuthContextType {
   token: string | null;
   user: UserSession | null;
   login: (email: string, password: string) => Promise<boolean>;
-  patientLogin: (upid: string, pin: string) => Promise<boolean>;
+  patientLogin: (upid: string, pin: string, email?: string, password?: string) => Promise<boolean>;
+  patientRegister: (data: any) => Promise<boolean>;
+  hospitalOwnerRegister: (data: any) => Promise<any>;
+  hospitalOwnerVerifyOtp: (email: string, otp: string) => Promise<boolean>;
+  employeeRegister: (data: any) => Promise<any>;
+  employeeConfirmOtp: (email: string, otp: string) => Promise<any>;
   logout: () => void;
   isAuthenticated: boolean;
   bypassRole: (role: string) => void;
 }
+
 const AuthContext = createContext<AuthContextType | null>(null);
 const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
 
@@ -75,12 +82,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const patientLogin = async (upid: string, pin: string): Promise<boolean> => {
+  const patientLogin = async (upid: string, pin: string, email?: string, password?: string): Promise<boolean> => {
     try {
+      const body: any = {};
+      if (email && password) {
+        body.email = email;
+        body.password = password;
+      } else {
+        body.upid = upid;
+        body.pin = pin;
+      }
+
       const res = await fetch(`${API_URL}/auth/patient-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ upid, pin })
+        body: JSON.stringify(body)
       });
       if (res.ok) {
         const data = await res.json();
@@ -95,13 +111,103 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const patientRegister = async (data: any): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/auth/patient-register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      return res.ok;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
+  const hospitalOwnerRegister = async (data: any): Promise<any> => {
+    try {
+      const res = await fetch(`${API_URL}/auth/hospital-owner/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return null;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  };
+
+  const hospitalOwnerVerifyOtp = async (email: string, otp: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/auth/hospital-owner/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setToken(data.token);
+        setUser(data.user);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
+  const employeeRegister = async (data: any): Promise<any> => {
+    try {
+      const res = await fetch(`${API_URL}/auth/employee/register`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return null;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  };
+
+  const employeeConfirmOtp = async (email: string, otp: string): Promise<any> => {
+    try {
+      const res = await fetch(`${API_URL}/auth/employee/confirm-otp`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ email, otp })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return null;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
   };
 
   const bypassRole = (role: string) => {
-    // Support the simulator bypass role
     setToken(`mock-bypass-token-${role}`);
     setUser({
       id: role === "admin" ? "s3" : role === "staff" ? "s2" : `s-${role}`,
@@ -109,12 +215,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       last_name: role.toUpperCase(),
       role: role,
       hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d",
+      hospital_name: "AIIMS New Delhi",
       upid: role === "patient" ? "CF-2026-MOCKPT" : undefined
     });
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, patientLogin, logout, isAuthenticated: !!token, bypassRole }}>
+    <AuthContext.Provider value={{ 
+      token, user, login, patientLogin, patientRegister, 
+      hospitalOwnerRegister, hospitalOwnerVerifyOtp, 
+      employeeRegister, employeeConfirmOtp, logout, isAuthenticated: !!token, bypassRole 
+    }}>
       {children}
     </AuthContext.Provider>
   );

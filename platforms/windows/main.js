@@ -20,8 +20,8 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', 'icon.ico')
   });
 
-  // Load backend server node or fallback to local files if packaged
-  mainWindow.loadURL('http://localhost:3001');
+  // Load deployed web application
+  mainWindow.loadURL('https://careflow-med-inky.vercel.app');
 
   mainWindow.on('closed', function () {
     mainWindow = null;

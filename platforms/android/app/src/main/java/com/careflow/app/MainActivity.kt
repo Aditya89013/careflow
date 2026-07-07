@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Point to deployed hospital server or local intranet node
-        webView.loadUrl("http://localhost:3001")
+        webView.loadUrl("https://careflow-med-inky.vercel.app")
     }
 
     private fun isTablet(): Boolean {
