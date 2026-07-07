@@ -7,10 +7,10 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const { login, patientLogin, hospitalOwnerRegister, hospitalOwnerVerifyOtp } = useAuth();
+  const { login, patientLogin } = useAuth();
   
-  // Tabs: "staff_login" | "patient_login" | "owner_register"
-  const [activeTab, setActiveTab] = useState<"staff_login" | "patient_login" | "owner_register">("staff_login");
+  // Tabs: "staff_login" | "patient_login" | "admin_login"
+  const [activeTab, setActiveTab] = useState<"staff_login" | "patient_login" | "admin_login">("staff_login");
   
   // Staff Login Fields
   const [email, setEmail] = useState("");
@@ -23,17 +23,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [patientPin, setPatientPin] = useState("");
   const [useLegacyLogin, setUseLegacyLogin] = useState(false);
 
-  // Hospital Owner Registration Fields
-  const [hospName, setHospName] = useState("");
-  const [hospAddress, setHospAddress] = useState("");
-  const [hospPhone, setHospPhone] = useState("");
-  const [ownerEmail, setOwnerEmail] = useState("");
-  const [ownerPassword, setOwnerPassword] = useState("");
-  const [ownerFirst, setOwnerFirst] = useState("");
-  const [ownerLast, setOwnerLast] = useState("");
-  const [ownerOtp, setOwnerOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [devOtpAlert, setDevOtpAlert] = useState<string | null>(null);
+  // Admin Login Fields
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
 
   // UI state
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +35,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const resetState = () => {
     setError(null);
     setSuccessMsg(null);
-    setDevOtpAlert(null);
   };
 
   const handleStaffLogin = async (e: React.FormEvent) => {
@@ -101,54 +92,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleOwnerRegister = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     resetState();
-    setLoading(true);
-
-    const payload = {
-      hospital_name: hospName,
-      address: hospAddress,
-      contact_phone: hospPhone,
-      email: ownerEmail,
-      password: ownerPassword,
-      first_name: ownerFirst,
-      last_name: ownerLast
-    };
-
-    try {
-      const res = await hospitalOwnerRegister(payload);
-      if (res) {
-        setOtpSent(true);
-        setSuccessMsg("OTP verification code generated and sent!");
-        if (res.dev_otp) {
-          setDevOtpAlert(`DEV MOCK OTP (printed in logs): ${res.dev_otp}`);
-        }
-      } else {
-        setError("Owner registration failed. Check details or email conflicts.");
-      }
-    } catch {
-      setError("An unexpected error occurred during owner registration");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOwnerOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    resetState();
-    if (!ownerOtp) return setError("Please enter the verification OTP");
+    if (!adminEmail || !adminPassword) return setError("Please enter your email and password");
     setLoading(true);
 
     try {
-      const success = await hospitalOwnerVerifyOtp(ownerEmail, ownerOtp);
+      const success = await login(adminEmail, adminPassword);
       if (success) {
         onLoginSuccess();
       } else {
-        setError("Invalid or expired OTP");
+        setError("Invalid email or password");
       }
     } catch {
-      setError("An unexpected error occurred during OTP verification");
+      setError("An unexpected error occurred during admin login");
     } finally {
       setLoading(false);
     }
@@ -186,12 +144,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             Patient Login
           </button>
           <button
-            onClick={() => { setActiveTab("owner_register"); resetState(); }}
+            onClick={() => { setActiveTab("admin_login"); resetState(); }}
             className={`py-2 text-[10px] font-bold rounded transition-all ${
-              activeTab === "owner_register" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900"
+              activeTab === "admin_login" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            Hospital Sign-Up
+            Admin Login
           </button>
         </div>
 
@@ -204,11 +162,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {successMsg && (
           <div className="bg-green-50 border border-green-200 text-green-700 text-xs p-3 rounded-lg text-center mb-6 font-semibold">
             {successMsg}
-          </div>
-        )}
-        {devOtpAlert && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3 rounded-lg text-center mb-6 font-mono font-bold">
-            {devOtpAlert}
           </div>
         )}
 
@@ -322,143 +275,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* ======================================================== */}
-        {/* 4. HOSPITAL OWNER / ORGANISATION SIGN-UP FORM            */}
+        {/* 4. ADMIN LOGIN FORM                                      */}
         {/* ======================================================== */}
-        {activeTab === "owner_register" && (
-          <div>
-            {!otpSent ? (
-              <form onSubmit={handleOwnerRegister} className="space-y-3">
-                <div className="border-b border-slate-100 pb-2 mb-2">
-                  <h3 className="text-xs font-bold uppercase text-slate-400">Hospital Details</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Hospital Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={hospName}
-                      onChange={(e) => setHospName(e.target.value)}
-                      placeholder="e.g. City General Hospital"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Contact Phone</label>
-                    <input
-                      type="text"
-                      required
-                      value={hospPhone}
-                      onChange={(e) => setHospPhone(e.target.value)}
-                      placeholder="555-0101"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Address</label>
-                    <input
-                      type="text"
-                      required
-                      value={hospAddress}
-                      onChange={(e) => setHospAddress(e.target.value)}
-                      placeholder="123 Hospital Lane"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                </div>
-
-                <div className="border-b border-slate-100 pb-2 mb-2 pt-2">
-                  <h3 className="text-xs font-bold uppercase text-slate-400">Owner / Manager Details</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">First Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={ownerFirst}
-                      onChange={(e) => setOwnerFirst(e.target.value)}
-                      placeholder="Jane"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Last Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={ownerLast}
-                      onChange={(e) => setOwnerLast(e.target.value)}
-                      placeholder="Smith"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Owner Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      value={ownerEmail}
-                      onChange={(e) => setOwnerEmail(e.target.value)}
-                      placeholder="owner@hospital.com"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-0.5">Set Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={ownerPassword}
-                      onChange={(e) => setOwnerPassword(e.target.value)}
-                      placeholder="Create password"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-bold tracking-wider uppercase transition-all mt-3"
-                >
-                  {loading ? "Registering Details..." : "Proceed (Send Verification OTP)"}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOwnerOtp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Enter Verification OTP</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={ownerOtp}
-                    onChange={(e) => setOwnerOtp(e.target.value)}
-                    placeholder="123456"
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800 text-center font-mono font-bold tracking-widest text-lg"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">Please enter the 6-digit OTP code sent to your email.</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setOtpSent(false); resetState(); }}
-                    className="flex-1 py-2 border border-slate-200 hover:bg-slate-50 rounded-md text-xs font-bold text-slate-600 transition-all"
-                  >
-                    Back to Edit
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-bold tracking-wider uppercase transition-all"
-                  >
-                    {loading ? "Verifying..." : "Confirm & Setup Hospital"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+        {activeTab === "admin_login" && (
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Admin Email</label>
+              <input
+                type="email"
+                required
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                placeholder="superadmin@careflow.com or manager@hospital.com"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:border-slate-400 focus:outline-none bg-white text-slate-800"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-bold tracking-wider uppercase transition-all"
+            >
+              {loading ? "Logging in..." : "Login to System Console"}
+            </button>
+          </form>
         )}
 
       </div>

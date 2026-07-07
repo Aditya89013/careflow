@@ -14,6 +14,10 @@ export const SuperAdminDashboard: React.FC = () => {
   const [phone, setPhone] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [ownerFirst, setOwnerFirst] = useState("");
+  const [ownerLast, setOwnerLast] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerPassword, setOwnerPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const API_URL = "http://localhost:3001/api/v1";
@@ -53,7 +57,11 @@ export const SuperAdminDashboard: React.FC = () => {
       address,
       contact_phone: phone,
       latitude: latitude ? Number(latitude) : undefined,
-      longitude: longitude ? Number(longitude) : undefined
+      longitude: longitude ? Number(longitude) : undefined,
+      owner_first_name: ownerFirst,
+      owner_last_name: ownerLast,
+      owner_email: ownerEmail,
+      owner_password: ownerPassword
     };
 
     try {
@@ -67,12 +75,16 @@ export const SuperAdminDashboard: React.FC = () => {
       });
 
       if (res.ok) {
-        setSuccessMsg(`Hospital "${name}" registered successfully! Default ER and ICU departments created.`);
+        setSuccessMsg(`Hospital "${name}" and owner account registered successfully! Default ER and ICU departments created.`);
         setName("");
         setAddress("");
         setPhone("");
         setLatitude("");
         setLongitude("");
+        setOwnerFirst("");
+        setOwnerLast("");
+        setOwnerEmail("");
+        setOwnerPassword("");
         fetchHospitals();
       } else {
         const err = await res.json();
@@ -187,12 +199,67 @@ export const SuperAdminDashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Owner / Manager Credentials */}
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                <h3 className="text-xs font-bold text-slate-800 uppercase mb-2">Owner / Manager Details</h3>
+                
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">First Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Jane"
+                      value={ownerFirst}
+                      onChange={e => setOwnerFirst(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded bg-white text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Smith"
+                      value={ownerLast}
+                      onChange={e => setOwnerLast(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded bg-white text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Owner Email</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="owner@hospital.com"
+                      value={ownerEmail}
+                      onChange={e => setOwnerEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded bg-white text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Owner Password</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={ownerPassword}
+                      onChange={e => setOwnerPassword(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded bg-white text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold transition active:scale-95"
+                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold transition active:scale-95 mt-2"
               >
-                {submitting ? "Registering..." : "Register Hospital"}
+                {submitting ? "Registering..." : "Register Hospital & Owner"}
               </button>
             </form>
           </div>

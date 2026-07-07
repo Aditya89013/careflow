@@ -43,9 +43,12 @@ router.get("/super-admin/hospitals", authMiddleware, requireRole(["super_admin"]
   }
 });
 
-// 2. Register a new hospital
+// 2. Register a new hospital (optionally with an owner account)
 router.post("/super-admin/hospitals", authMiddleware, requireRole(["super_admin"]), async (req: Request, res: Response) => {
-  const { name, address, contact_phone, latitude, longitude } = req.body;
+  const { 
+    name, address, contact_phone, latitude, longitude,
+    owner_email, owner_password, owner_first_name, owner_last_name 
+  } = req.body;
 
   if (!name || !address || !contact_phone) {
     return res.status(400).json({ error: "Missing required hospital fields (name, address, contact_phone)" });
@@ -54,6 +57,17 @@ router.post("/super-admin/hospitals", authMiddleware, requireRole(["super_admin"
   try {
     const repo = new SqlHospitalRepository("8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d");
     
+    // If owner details are provided, check email availability first
+    if (owner_email) {
+      const existing = await repo.getStaffByEmail(owner_email);
+      if (existing) {
+        return res.status(400).json({ error: `Owner email ${owner_email} is already registered` });
+      }
+      if (!owner_password || !owner_first_name || !owner_last_name) {
+        return res.status(400).json({ error: "Missing required owner details (password, first name, last name)" });
+      }
+    }
+
     const hospitalId = `hosp-${Date.now()}`;
     const newHospital = await repo.addHospital({
       id: hospitalId,
@@ -68,9 +82,31 @@ router.post("/super-admin/hospitals", authMiddleware, requireRole(["super_admin"
     const hospitalRepo = new SqlHospitalRepository(hospitalId);
     await hospitalRepo.createDefaultDepartments();
 
+    // Create owner account if requested
+    let newOwner = null;
+    if (owner_email) {
+      const ownerId = `s-owner-${Date.now()}`;
+      newOwner = await hospitalRepo.addStaffMember({
+        id: ownerId,
+        auth_user_id: `user_owner_${Date.now()}`,
+        first_name: owner_first_name,
+        last_name: owner_last_name,
+        role: "admin",
+        specialty: "management",
+        contact_number: contact_phone,
+        email: owner_email,
+        password_hash: owner_password
+      });
+    }
+
     return res.status(201).json({
       message: "Hospital registered successfully by Super Admin",
-      hospital: newHospital
+      hospital: newHospital,
+      owner: newOwner ? {
+        id: newOwner.id,
+        email: newOwner.email,
+        role: newOwner.role
+      } : null
     });
   } catch (err: any) {
     console.error(err);
