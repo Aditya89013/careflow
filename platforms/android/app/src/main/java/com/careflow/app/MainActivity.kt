@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
             databaseEnabled = true
             useWideViewPort = true
             loadWithOverviewMode = true
-            cacheMode = WebSettings.LOAD_DEFAULT
+            cacheMode = WebSettings.LOAD_NO_CACHE
             mediaPlaybackRequiresUserGesture = false
             
             // Adjust scaling specifically for tablets vs phones
@@ -110,6 +110,9 @@ class MainActivity : AppCompatActivity() {
                 handler?.proceed() // Proceed past SSL validation failure (specifically for Let's Encrypt trust on old Android WebViews)
             }
         }
+
+        // Clear cache to bypass any old cached blank page states
+        webView.clearCache(true)
 
         // Point to deployed hospital server or local intranet node
         webView.loadUrl("https://careflow-med-inky.vercel.app")

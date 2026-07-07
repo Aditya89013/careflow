@@ -20,11 +20,15 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', 'icon.ico')
   });
 
-  // Load deployed web application
-  mainWindow.loadURL('https://careflow-med-inky.vercel.app');
+  // Clear session cache to prevent loading old cached blank screens
+  mainWindow.webContents.session.clearCache().then(() => {
+    mainWindow.loadURL('https://careflow-med-inky.vercel.app', {
+      extraHeaders: 'pragma: no-cache\ncache-control: no-cache'
+    });
+  });
 
-  // Open Developer Tools to see what is failing
-  mainWindow.webContents.openDevTools();
+  // Open Developer Tools to see what is failing (disabled for production release)
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', function () {
     mainWindow = null;
