@@ -56,7 +56,24 @@ app.use(express.static(frontendDist));
 
 // SPA catch-all: any non-API route serves index.html for React Router
 app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendDist, "index.html"));
+  const filePath = path.join(frontendDist, "index.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("[ERROR] Failed to serve index.html from:", filePath, err);
+      res.status(500).send(`
+        <html>
+          <head><title>CareFlow Load Error</title></head>
+          <body style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; color: #333;">
+            <h2>CareFlow Portal Load Failure</h2>
+            <p>The server failed to locate or load the frontend interface assets.</p>
+            <p style="color: #666; font-size: 0.9rem;">Path searched: <code>${filePath}</code></p>
+            <p style="color: red; font-size: 0.9rem;">Error: <code>${err.message}</code></p>
+            <p>Please check your Vercel build status and ensure the frontend build ran correctly during deployment.</p>
+          </body>
+        </html>
+      `);
+    }
+  });
 });
 
 // ✅ Export for Vercel Serverless Architecture
