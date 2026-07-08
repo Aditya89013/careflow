@@ -17,7 +17,7 @@ interface AuthContextType {
   user: UserSession | null;
   login: (email: string, password: string, requiredRole?: "admin" | "staff") => Promise<{ success: boolean; error?: string }>;
   patientLogin: (upid: string, pin: string, email?: string, password?: string) => Promise<{ success: boolean; error?: string }>;
-  patientRegister: (data: any) => Promise<boolean>;
+  patientRegister: (data: any) => Promise<{ success: boolean; upid?: string; error?: string }>;
   hospitalOwnerRegister: (data: any) => Promise<any>;
   hospitalOwnerVerifyOtp: (email: string, otp: string) => Promise<boolean>;
   employeeRegister: (data: any) => Promise<any>;
@@ -113,17 +113,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const patientRegister = async (data: any): Promise<boolean> => {
+  const patientRegister = async (data: any): Promise<{ success: boolean; upid?: string; error?: string }> => {
     try {
       const res = await fetch(`${API_URL}/auth/patient-register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
-      return res.ok;
+      const resData = await res.json().catch(() => ({}));
+      if (res.ok) {
+        return { success: true, upid: resData.upid };
+      }
+      return { success: false, error: resData.error || "Registration failed" };
     } catch (err) {
       console.error(err);
-      return false;
+      return { success: false, error: "Network error occurred" };
     }
   };
 

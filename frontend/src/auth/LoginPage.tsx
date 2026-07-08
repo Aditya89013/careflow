@@ -8,7 +8,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const { login, patientLogin } = useAuth();
+  const { login, patientLogin, patientRegister } = useAuth();
   
   // Tabs: "admin_login" | "staff_login" | "patient_login"
   const [activeTab, setActiveTab] = useState<"admin_login" | "staff_login" | "patient_login">("staff_login");
@@ -25,6 +25,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [patientUpid, setPatientUpid] = useState("");
   const [patientPin, setPatientPin] = useState("");
   const [useLegacyLogin, setUseLegacyLogin] = useState(false);
+
+  // Patient Registration Fields
+  const [patientRegisterMode, setPatientRegisterMode] = useState(false);
+  const [regFirstName, setRegFirstName] = useState("");
+  const [regLastName, setRegLastName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regDob, setRegDob] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regGender, setRegGender] = useState("Other");
+  const [regBloodGroup, setRegBloodGroup] = useState("Unknown");
+  const [regEmergencyName, setRegEmergencyName] = useState("");
+  const [regEmergencyPhone, setRegEmergencyPhone] = useState("");
 
   // Forgot Password flow states
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
@@ -115,6 +128,50 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       }
     } catch {
       setError("An unexpected error occurred during patient login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePatientRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetState();
+    if (!regFirstName || !regLastName || !regEmail || !regPhone || !regDob || !regPassword) {
+      return setError("Please fill in all required registration fields");
+    }
+    setLoading(true);
+
+    try {
+      const result = await patientRegister({
+        first_name: regFirstName,
+        last_name: regLastName,
+        email: regEmail,
+        phone: regPhone,
+        date_of_birth: regDob,
+        password: regPassword,
+        gender: regGender,
+        blood_group: regBloodGroup,
+        emergency_contact_name: regEmergencyName || "Self",
+        emergency_contact_phone: regEmergencyPhone || regPhone
+      });
+
+      if (result.success) {
+        setSuccessMsg(`Registration successful! Your Universal Patient ID (UPID) is: ${result.upid}. You can now log in using your Email or UPID.`);
+        setPatientRegisterMode(false);
+        // Clean fields
+        setRegFirstName("");
+        setRegLastName("");
+        setRegEmail("");
+        setRegPhone("");
+        setRegDob("");
+        setRegPassword("");
+        setRegEmergencyName("");
+        setRegEmergencyPhone("");
+      } else {
+        setError(result.error || "Patient registration failed");
+      }
+    } catch {
+      setError("An unexpected error occurred during patient registration");
     } finally {
       setLoading(false);
     }
@@ -291,6 +348,156 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </form>
             )}
           </div>
+        ) : patientRegisterMode ? (
+          <form onSubmit={handlePatientRegister} className="space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <h2 className="text-xs font-black uppercase text-slate-500 tracking-wider">Patient Registration</h2>
+              <button
+                type="button"
+                onClick={() => { setPatientRegisterMode(false); resetState(); }}
+                className="text-xs text-slate-500 hover:text-slate-900 font-bold"
+              >
+                Back to Login
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">First Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={regFirstName}
+                  onChange={(e) => setRegFirstName(e.target.value)}
+                  placeholder="Sarah"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Last Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={regLastName}
+                  onChange={(e) => setRegLastName(e.target.value)}
+                  placeholder="Connor"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Email Address *</label>
+              <input
+                type="email"
+                required
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="sarah.connor@gmail.com"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="555-0987"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Date of Birth *</label>
+                <input
+                  type="date"
+                  required
+                  value={regDob}
+                  onChange={(e) => setRegDob(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Choose Password *</label>
+              <input
+                type="password"
+                required
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Gender</label>
+                <select
+                  value={regGender}
+                  onChange={(e) => setRegGender(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Blood Group</label>
+                <select
+                  value={regBloodGroup}
+                  onChange={(e) => setRegBloodGroup(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                >
+                  <option value="A_positive">A+</option>
+                  <option value="A_negative">A-</option>
+                  <option value="B_positive">B+</option>
+                  <option value="B_negative">B-</option>
+                  <option value="AB_positive">AB+</option>
+                  <option value="AB_negative">AB-</option>
+                  <option value="O_positive">O+</option>
+                  <option value="O_negative">O-</option>
+                  <option value="Unknown">Unknown</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Emergency Contact Name</label>
+                <input
+                  type="text"
+                  value={regEmergencyName}
+                  onChange={(e) => setRegEmergencyName(e.target.value)}
+                  placeholder="John Connor"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Emergency Contact Phone</label>
+                <input
+                  type="tel"
+                  value={regEmergencyPhone}
+                  onChange={(e) => setRegEmergencyPhone(e.target.value)}
+                  placeholder="555-5678"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
+            >
+              {loading ? "Registering..." : "Submit Registration"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPatientRegisterMode(false); resetState(); }}
+              className="w-full text-slate-500 hover:text-slate-800 text-[10px] font-bold uppercase tracking-wider py-1"
+            >
+              Back to Login
+            </button>
+          </form>
         ) : (
           <>
             {/* Tab Controls */}
@@ -443,6 +650,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 >
                   {loading ? "Logging in..." : "Access Patient Portal"}
                 </button>
+                <div className="text-center mt-4">
+                  <button
+                    type="button"
+                    onClick={() => { setPatientRegisterMode(true); resetState(); }}
+                    className="text-[10px] text-slate-500 hover:underline font-bold uppercase tracking-wider"
+                  >
+                    Don't have an account? Create an Account
+                  </button>
+                </div>
               </form>
             )}
 
