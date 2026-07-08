@@ -201,6 +201,8 @@ export const mockDb: MockDbSchema = {
       account_active: true,
       admitted_hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d",
       admitted_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+      email: "patient@careflow.com",
+      password_hash: "password123",
       first_name: "Sarah",
       last_name: "Connor",
       date_of_birth: "1985-11-10",
@@ -1406,6 +1408,116 @@ export class SqlHospitalRepository implements HospitalRepository {
       `UPDATE universal_patients SET password_hash = $1 WHERE email = $2`,
       [passwordHash, email]
     );
+  }
+}
+
+export async function seedDatabase(): Promise<void> {
+  if (useMockDb || !pool) {
+    console.log("[CareFlow Seed] Skipping PostgreSQL database seeding (running in mock DB or pool not initialized).");
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    console.log("[CareFlow Seed] Starting database seeding...");
+
+    // 1. Hospitals
+    await client.query(`
+      INSERT INTO hospitals (id, name, latitude, longitude, address, contact_phone)
+      VALUES ('8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'AIIMS New Delhi Regional Complex', 28.567200, 77.210000, 'Ansari Nagar, New Delhi, Delhi 110029', '011-26588500')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 2. Departments
+    await client.query(`
+      INSERT INTO departments (id, hospital_id, name, code)
+      VALUES 
+      ('d2d2d2d2-e3e3-f4f4-0505-161616161616', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Intensive Care Unit', 'ICU'),
+      ('e1e1e1e1-e2e2-e3e3-e4e4-e5e5e5e5e5e5', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Emergency Room', 'ER')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 3. Staff Members
+    await client.query(`
+      INSERT INTO staff_members (id, hospital_id, department_id, auth_user_id, first_name, last_name, role, specialty, contact_number, email, password_hash, is_active)
+      VALUES
+      ('s1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_smith', 'Sarah', 'Smith', 'dept_head', 'doctor', '555-1234', 'sarah@careflow.com', 'password123', true),
+      ('s2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_connor', 'John', 'Connor', 'staff', 'nurse', '555-5678', 'john@careflow.com', 'password123', true),
+      ('s-receptionist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_receptionist', 'Rita', 'Receptionist', 'receptionist', 'support', '555-0001', 'receptionist@careflow.com', 'password123', true),
+      ('s-doctor', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_doctor', 'Dr. Rajesh', 'Kumar', 'doctor', 'doctor', '555-0002', 'doctor@careflow.com', 'password123', true),
+      ('s-nurse', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_nurse', 'Priyanka', 'Sharma', 'nurse', 'nurse', '555-0003', 'nurse@careflow.com', 'password123', true),
+      ('s-wardboy', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_wardboy', 'Wayne', 'Wardboy', 'ward_boy', 'support', '555-0004', 'wardboy@careflow.com', 'password123', true),
+      ('s-admin', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_admin', 'Adam', 'Admin', 'admin', 'support', '555-0008', 'admin@careflow.com', 'password123', true)
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 4. Universal Patients
+    await client.query(`
+      INSERT INTO universal_patients (upid, pin_hash, account_active, admitted_hospital_id, admitted_at, first_name, last_name, date_of_birth, gender, blood_group, phone, emergency_contact_name, emergency_contact_phone, allergies, chronic_conditions, current_medications, insurance_provider, insurance_policy_number, admission_history, email, password_hash)
+      VALUES
+      ('CF-2026-MOCKPT', '123456', true, '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', NOW() - INTERVAL '24 hours', 'Sarah', 'Connor', '1985-11-10', 'Female', 'A_negative', '555-0987', 'John Connor', '555-5678', '["Sulfa Drugs", "Penicillin"]'::jsonb, '["Asthma"]'::jsonb, '["Albuterol Inhaler"]'::jsonb, 'SarahCare', 'SC-99901', '[{"id": "adm-mock-1", "hospital_id": "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", "hospital_name": "AIIMS New Delhi", "admitted_at": "2026-07-04T15:00:00Z", "treating_physician": "Dr. Rajesh Kumar"}]'::jsonb, 'patient@careflow.com', 'password123')
+      ON CONFLICT (upid) DO UPDATE SET email = 'patient@careflow.com', password_hash = 'password123'
+    `);
+
+    // 5. Patients
+    await client.query(`
+      INSERT INTO patients (id, hospital_id, upid, first_name, last_name, date_of_birth, triage_level, required_department_code, needs_ventilator, status, vitals, admitted_at)
+      VALUES
+      ('p-mock-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'CF-2026-MOCKPT', 'Sarah', 'Connor', '1985-11-10', '2_emergent', 'ICU', false, 'admitted', '{"hr": "82", "bp": "118/75", "o2": "97%", "oxygenation_source": "SpO2", "is_delirious": false}'::jsonb, NOW() - INTERVAL '24 hours')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 6. Infrastructure
+    await client.query(`
+      INSERT INTO infrastructure (id, hospital_id, type, total_capacity, current_occupancy)
+      VALUES
+      ('ward-icu', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ICU', 10, 2),
+      ('ward-ccu', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'CCU', 5, 1),
+      ('ward-general', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'General', 30, 5)
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 7. Resources
+    await client.query(`
+      INSERT INTO resources (id, hospital_id, ward_id, type, status)
+      VALUES
+      ('res-vent-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-icu', 'Ventilator', 'In-Use'),
+      ('res-vent-2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-icu', 'Ventilator', 'Available'),
+      ('res-cyl-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-general', 'Oxygen Cylinder', 'Available'),
+      ('res-cyl-2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-general', 'Oxygen Cylinder', 'In-Use')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 8. Employees
+    await client.query(`
+      INSERT INTO employees (id, hospital_id, name, email, role, current_shift, assigned_ward_id, password_hash)
+      VALUES
+      ('s1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Sarah Smith', 'sarah.smith@careflow.com', 'Doctor', 'Morning', 'ward-icu', 'doctor123'),
+      ('s2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'John Connor', 'john.connor@careflow.com', 'Nurse', 'Evening', 'ward-icu', 'nurse123'),
+      ('s-receptionist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Rita Receptionist', 'receptionist@careflow.com', 'Receptionist', 'Morning', 'ward-general', 'receptionist123'),
+      ('s-doctor', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Rajesh Kumar', 'doctor@careflow.com', 'Doctor', 'Morning', 'ward-icu', 'doctor123'),
+      ('s-nurse', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Priyanka Nurse', 'nurse@careflow.com', 'Nurse', 'Night', 'ward-icu', 'nurse123'),
+      ('s-wardboy', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Wayne Wardboy', 'wardboy@careflow.com', 'Ward Boy', 'Morning', 'ward-general', 'wardboy123'),
+      ('s-labtech', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Larry Labtech', 'labtech@careflow.com', 'Lab Tech', 'Morning', 'ward-general', 'labtech123'),
+      ('s-pharmacist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Peter Pharmacist', 'pharmacist@careflow.com', 'Pharmacist', 'Morning', 'ward-general', 'pharmacist123'),
+      ('s-md', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Milton Director', 'md@careflow.com', 'medical_director', 'Morning', 'ward-icu', 'md123'),
+      ('s-admin', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Arthur Admin', 'admin@careflow.com', 'admin', 'Morning', 'ward-general', 'admin123')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // 9. Treatment Sessions
+    await client.query(`
+      INSERT INTO treatment_sessions (id, patient_id, hospital_id, assigned_employee_id, resource_used_ids, status, health_issue_description)
+      VALUES
+      ('ts-mock-1', 'CF-2026-MOCKPT', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 's-doctor', '["res-vent-1"]'::jsonb, 'Admitted', 'Patient has severe respiratory distress, oxygen level is 88%. Initiated invasive mechanical ventilation.')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    console.log("[CareFlow Seed] Database seeded successfully!");
+  } catch (err) {
+    console.error("[CareFlow Seed] Error seeding database:", err);
+  } finally {
+    client.release();
   }
 }
 

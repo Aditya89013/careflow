@@ -15,6 +15,7 @@ import emergencyRouter from "./routes/emergency";
 import patientPortalRouter from "./routes/patient_portal";
 import superAdminRouter from "./routes/super_admin";
 import { subscriptions } from "./ws_events";
+import { seedDatabase } from "./db";
 
 dotenv.config();
 
@@ -80,9 +81,14 @@ wss.on("connection", (ws: WebSocket) => {
   });
 });
 
-server.listen(port, () => {
+server.listen(port, async () => {
   console.log(`CareFlow server is running on http://localhost:${port}`);
   console.log(`WebSockets gateway listening on ws://localhost:${port}`);
+  try {
+    await seedDatabase();
+  } catch (err) {
+    console.error("Database seeding failed on startup:", err);
+  }
 });
 
 export { server };
