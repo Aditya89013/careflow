@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { SqlHospitalRepository } from "../db";
 import { authMiddleware } from "../middleware/auth";
 import * as jwt from "jsonwebtoken";
+import { sendEmail } from "../services/email";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key_12983719";
@@ -269,10 +270,12 @@ router.post("/auth/hospital-owner/register", async (req: Request, res: Response)
       hospital_name, address, contact_phone, email, password, first_name, last_name
     });
 
-    // Simulate sending email (print to console/logs)
-    console.log(`\n======================================================`);
-    printDevLog(`[CareFlow Mail] OTP for Hospital Owner Registration (${email}): ${otp}`);
-    console.log(`======================================================\n`);
+    // Send email with OTP
+    await sendEmail(
+      email,
+      "CareFlow - Hospital Owner Registration OTP",
+      `Hello ${first_name || "Owner"},\n\nYour OTP for registering the hospital "${hospital_name || "CareFlow Hospital"}" is: ${otp}\n\nThis OTP is valid for 10 minutes.`
+    );
 
     return res.status(200).json({
       message: "OTP sent to your email",
@@ -378,9 +381,12 @@ router.post("/auth/employee/register", authMiddleware, async (req: Request, res:
       first_name, last_name, role, specialty, email, contact_number, hospital_id: hospitalId
     });
 
-    console.log(`\n======================================================`);
-    printDevLog(`[CareFlow Mail] OTP for Employee Confirmation (${email}): ${otp}`);
-    console.log(`======================================================\n`);
+    // Send email with OTP
+    await sendEmail(
+      email,
+      "CareFlow - Employee Confirmation OTP",
+      `Hello ${first_name},\n\nYou have been added as a ${role} at CareFlow. Please confirm your email using the following OTP:\n\n${otp}`
+    );
 
     return res.status(200).json({
       message: "OTP generated for employee confirmation",
@@ -438,9 +444,12 @@ router.post("/auth/employee/confirm-otp", authMiddleware, async (req: Request, r
       password_hash: password
     });
 
-    console.log(`\n======================================================`);
-    printDevLog(`[CareFlow Mail] Employee Account Activated! ID: ${employeeId}, Password: ${password}`);
-    console.log(`======================================================\n`);
+    // Send email with credentials
+    await sendEmail(
+      email,
+      "CareFlow - Account Activated",
+      `Hello ${payload.first_name},\n\nYour account has been activated!\n\nYour Login Credentials:\nEmployee ID: ${employeeId}\nPassword: ${password}\n\nPlease keep these details secure.`
+    );
 
     return res.status(201).json({
       message: "Employee successfully confirmed and onboarding completed",
@@ -483,9 +492,12 @@ router.post("/auth/patient/forgot-password", async (req: Request, res: Response)
     // Save to otp_verifications
     await repo.saveOtp(email, otp, "patient_forgot_password", { email });
 
-    console.log(`\n======================================================`);
-    printDevLog(`[CareFlow Mail] Forgot Password OTP for ${email}: ${otp}`);
-    console.log(`======================================================\n`);
+    // Send email with forgot password OTP
+    await sendEmail(
+      email,
+      "CareFlow - Forgot Password OTP",
+      `Hello ${patient.first_name},\n\nYou requested a password reset. Your OTP is: ${otp}\n\nIf you did not request this, please ignore this email.`
+    );
 
     return res.status(200).json({
       message: "Forgot password OTP sent to email",
