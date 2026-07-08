@@ -104,7 +104,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      let result = { success: false, error: "" };
+      let result: { success: boolean; error?: string } = { success: false, error: "" };
       if (useLegacyLogin) {
         if (!patientUpid || !patientPin) {
           setError("UPID and PIN are required");

@@ -75,7 +75,6 @@ export default function App() {
 
 function MainApp() {
   const { isAuthenticated, user, logout, token } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "intake" | "finder" | "shifts">("dashboard");
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [outbox, setOutbox] = useState<any[]>([]);

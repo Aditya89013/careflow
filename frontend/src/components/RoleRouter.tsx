@@ -1,13 +1,6 @@
 import React from "react";
 import { useAuth } from "../auth/AuthContext";
 import { PatientDashboard } from "./dashboards/PatientDashboard";
-import { ReceptionistDashboard } from "./dashboards/ReceptionistDashboard";
-import { DoctorDashboard } from "./dashboards/DoctorDashboard";
-import { NurseDashboard } from "./dashboards/NurseDashboard";
-import { WardBoyDashboard } from "./dashboards/WardBoyDashboard";
-import { LabTechDashboard } from "./dashboards/LabTechDashboard";
-import { PharmacistDashboard } from "./dashboards/PharmacistDashboard";
-import { MDDashboard } from "./dashboards/MDDashboard";
 import { AdminDashboard } from "./dashboards/AdminDashboard";
 import { EmployeeDashboard } from "./dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "./dashboards/SuperAdminDashboard";

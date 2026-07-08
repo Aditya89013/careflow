@@ -13,7 +13,7 @@ export const AdminDashboard: React.FC = () => {
   // Data State
   const [beds, setBeds] = useState<any[]>([]);
   const [ventilators, setVentilators] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
+  const [_staff, setStaff] = useState<any[]>([]);
   const [emergencies, setEmergencies] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [infrastructure, setInfrastructure] = useState<any[]>([]);
@@ -48,7 +48,7 @@ export const AdminDashboard: React.FC = () => {
   const [empOtp, setEmpOtp] = useState("");
   const [empOtpSent, setEmpOtpSent] = useState(false);
   const [empCredentials, setEmpCredentials] = useState<any | null>(null);
-  const [devEmpOtp, setDevEmpOtp] = useState<string | null>(null);
+  const [_devEmpOtp, setDevEmpOtp] = useState<string | null>(null);
 
   // Form State: AI Resource Advisor
   const [aiAllocationReport, setAiAllocationReport] = useState<string | null>(null);
@@ -209,7 +209,7 @@ export const AdminDashboard: React.FC = () => {
     resetMessages();
     setEmpCredentials(null);
 
-    const ok = await employeeRegister(empFirst, empLast, empRole, empSpecialty, empEmail, empContact);
+    const ok = await employeeRegister({ first_name: empFirst, last_name: empLast, role: empRole, specialty: empSpecialty, email: empEmail, contact_number: empContact });
     if (ok) {
       setEmpOtpSent(true);
       // Retrieve the generated OTP directly in development
