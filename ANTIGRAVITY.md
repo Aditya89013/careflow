@@ -73,3 +73,22 @@ This file serves as a handoff context for Antigravity agents continuing the deve
 - **HIPAA Role Scoping**: Restricted `ward_boy` and `lab_tech` roles from accessing raw patient clinical profiles. They are now limited to reading task queues and lab queues respectively, while general patient vitals returns a 403.
 - **Operations Simulation Validation**: Updated the simulation script to verify all clinical actions across the 9 roles, achieving a perfect **10/10 Scorecard** with all endpoints returning green and RBAC correctly throwing 403s where expected.
 
+### 8. Removal of Guest Mode Portal & Clean Landing (Completed)
+- **UI Streamlining (`frontend/src/App.tsx`)**: Removed the guest/EMS portal as the default landing view. The application now correctly opens directly to the secure login console, preserving public regional directories and maps in a clean sub-link/button.
+
+### 9. Database Seeder & Demo Accounts (Completed)
+- **Startup Seeder (`src/db.ts` & `src/index.ts`)**: Built an automated database seeder `seedDatabase()` that runs immediately on application startup.
+- **Vercel Serverless Optimization (`src/db.ts`)**: Structured the seeder as a self-invoking IIFE on module load to guarantee execution during serverless cold starts in Vercel.
+- **Demo Data**: Populated the Supabase PostgreSQL database with a fully operational mock complex (**AIIMS New Delhi Regional Complex**) including clinical leads, standard nurses, receptionists, lab technicians, active admitted patients, ICU ward configurations, ventilators, and oxygen cylinders.
+
+### 10. Login Role Segregation (Completed)
+- **Verification (`src/routes/auth.ts`, `LoginPage.tsx`, `AuthContext.tsx`)**: Implemented explicit segregation checks on backend logins to block cross-portal logins:
+  - Admin login tab strictly permits `admin`, `medical_director`, and `super_admin` accounts.
+  - Staff login tab strictly permits clinical and support staff (`doctor`, `nurse`, `receptionist`, etc.).
+  - Patient login is dedicated to patients via the `/auth/patient-login` route.
+
+### 11. Patient Sign-Up & ID Creation (Completed)
+- **Patient Sign-Up Flow (`LoginPage.tsx` & `AuthContext.tsx`)**: Built a fully responsive **Patient Registration Form** on the login page allowing new patients to sign up on their own, setting custom credentials, email, password, and demographics.
+- **Generated UPID Presentation**: Generates and prints the permanent **Universal Patient ID (UPID)** to the user upon successful signup, supporting direct logins via Email or UPID.
+
+
