@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_URL } from "../../config";
 
 interface EmployeePayroll {
   staff_member_id: string;
@@ -63,7 +64,7 @@ export const PayrollTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+
 
   // Fetch summary calculation
   const fetchSummary = async () => {

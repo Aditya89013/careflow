@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { API_URL } from "../../config";
 
 export const SuperAdminDashboard: React.FC = () => {
   const { token, logout, user } = useAuth();
@@ -20,7 +21,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [ownerPassword, setOwnerPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const API_URL = "http://localhost:3001/api/v1";
+
 
   const fetchHospitals = async () => {
     try {

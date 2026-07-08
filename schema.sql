@@ -23,6 +23,33 @@ CREATE TABLE hospitals (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 1a. Universal Patients
+CREATE TABLE universal_patients (
+    upid VARCHAR(100) PRIMARY KEY,
+    pin_hash VARCHAR(255) NOT NULL,
+    account_active BOOLEAN DEFAULT TRUE,
+    admitted_hospital_id UUID REFERENCES hospitals(id) ON DELETE SET NULL,
+    admitted_at TIMESTAMP WITH TIME ZONE,
+    discharged_at TIMESTAMP WITH TIME ZONE,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    gender VARCHAR(50) DEFAULT 'Other',
+    blood_group VARCHAR(50) DEFAULT 'Unknown',
+    phone VARCHAR(50) DEFAULT '',
+    emergency_contact_name VARCHAR(100) DEFAULT '',
+    emergency_contact_phone VARCHAR(50) DEFAULT '',
+    allergies JSONB DEFAULT '[]'::jsonb,
+    chronic_conditions JSONB DEFAULT '[]'::jsonb,
+    current_medications JSONB DEFAULT '[]'::jsonb,
+    insurance_provider VARCHAR(100) DEFAULT '',
+    insurance_policy_number VARCHAR(100) DEFAULT '',
+    admission_history JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+
 -- 2. Departments
 CREATE TABLE departments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -76,6 +103,7 @@ CREATE TABLE staff_members (
 CREATE TABLE patients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    upid VARCHAR(100),
     first_name VARCHAR(100), 
     last_name VARCHAR(100),  
     date_of_birth DATE,      
@@ -84,7 +112,8 @@ CREATE TABLE patients (
     needs_ventilator BOOLEAN DEFAULT FALSE,
     status patient_status NOT NULL DEFAULT 'waiting',
     admitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    discharged_at TIMESTAMP WITH TIME ZONE
+    discharged_at TIMESTAMP WITH TIME ZONE,
+    vitals JSONB
 );
 
 -- 7. Allocations

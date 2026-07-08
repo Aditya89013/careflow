@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { API_URL } from "../../config";
 import { PayrollTab } from "./PayrollTab";
 import AttendanceTab from "./AttendanceTab";
 
@@ -51,7 +52,7 @@ export const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+
 
   const resetMessages = () => {
     setError(null);

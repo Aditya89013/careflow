@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import careflowLogo from "./assets/careflow_logo.png";
+import { API_URL } from "./config";
 import { IntakeScreen } from "./components/IntakeScreen";
 import { FinderScreen } from "./components/FinderScreen";
 import { ShiftsScreen } from "./components/ShiftsScreen";
@@ -102,7 +103,7 @@ function MainApp() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [showArrivalAck, setShowArrivalAck] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+
 
   const getHeaders = () => {
     return {

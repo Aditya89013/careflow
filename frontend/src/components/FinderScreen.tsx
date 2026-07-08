@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { API_URL } from "../config";
 
 declare const L: any;
 
@@ -51,7 +52,7 @@ export const FinderScreen: React.FC<FinderScreenProps> = ({
 
     const fetchHospitals = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/v1/public/hospitals");
+        const res = await fetch(`${API_URL}/public/hospitals`);
         if (res.ok) {
           const data = await res.json();
           const list: Hospital[] = data.hospitals;

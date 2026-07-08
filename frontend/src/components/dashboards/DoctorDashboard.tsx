@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { API_URL } from "../../config";
 
 export const DoctorDashboard: React.FC = () => {
   const { token, logout } = useAuth();
@@ -13,7 +14,7 @@ export const DoctorDashboard: React.FC = () => {
 
   const fetchPatients = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/v1/patients", {
+      const res = await fetch(`${API_URL}/patients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -37,7 +38,7 @@ export const DoctorDashboard: React.FC = () => {
 
     setLoadingHistory(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/v1/patients/${p.upid}/history`, {
+      const res = await fetch(`${API_URL}/patients/${p.upid}/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { API_URL } from "../../config";
 
 export const EmployeeDashboard: React.FC = () => {
   const { token, logout, user } = useAuth();
@@ -11,7 +12,7 @@ export const EmployeeDashboard: React.FC = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+
 
   const fetchEmployeeData = async () => {
     setLoading(true);

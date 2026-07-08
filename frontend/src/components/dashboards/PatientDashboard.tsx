@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { API_URL } from "../../config";
 
 export const PatientDashboard: React.FC = () => {
   const { token, logout, user } = useAuth();
@@ -17,7 +18,7 @@ export const PatientDashboard: React.FC = () => {
   const [requestStatus, setRequestStatus] = useState<string | null>(null);
   const [submittingEmergency, setSubmittingEmergency] = useState<string | null>(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+
 
   const fetchTreatments = async () => {
     setLoadingStays(true);

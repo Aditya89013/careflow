@@ -436,11 +436,12 @@ export class SqlHospitalRepository implements HospitalRepository {
       return dbPatient;
     }
     const res = await executeQuery(this.hospitalId, 
-      `INSERT INTO patients (id, hospital_id, first_name, last_name, date_of_birth, triage_level, required_department_code, needs_ventilator, status, admitted_at, vitals)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      `INSERT INTO patients (id, hospital_id, upid, first_name, last_name, date_of_birth, triage_level, required_department_code, needs_ventilator, status, admitted_at, vitals)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         patient.id || `p-${Date.now()}`,
         this.hospitalId, 
+        patient.upid || null,
         patient.first_name, 
         patient.last_name, 
         patient.date_of_birth, 

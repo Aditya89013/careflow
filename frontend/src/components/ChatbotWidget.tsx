@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-
-const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api/v1`;
+import { API_URL } from "../config";
 
 // ─────────────────────────────────────────────────────────────────
 // Types

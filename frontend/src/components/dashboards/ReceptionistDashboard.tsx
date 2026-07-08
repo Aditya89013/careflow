@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
+import { API_URL } from "../../config";
 
 export const ReceptionistDashboard: React.FC = () => {
   const { token, logout } = useAuth();
@@ -31,7 +32,7 @@ export const ReceptionistDashboard: React.FC = () => {
   const [dischargeSummary, setDischargeSummary] = useState("");
   const [primaryDiagnosis, setPrimaryDiagnosis] = useState("");
 
-  const API_URL = "http://localhost:3001/api/v1";
+
 
   const fetchData = async () => {
     try {
