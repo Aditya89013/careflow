@@ -361,45 +361,9 @@ function MainApp() {
     }
   };
 
-  // Login Modal Toggle
-  if (showLogin) {
-    return <LoginPage onLoginSuccess={() => setShowLogin(false)} />;
-  }
-
-  // Guest Mode (Finder view + capacity maps)
+  // If not authenticated, render LoginPage directly
   if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
-          <div className="flex items-center space-x-3">
-            <img src={careflowLogo} alt="CareFlow Logo" className="h-8 w-8 object-contain opacity-90" />
-            <div>
-              <h1 className="font-semibold text-lg text-gray-900 tracking-tight leading-none">CareFlow</h1>
-              <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">Guest Mode Portal</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowLogin(true)}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm py-2 px-5 rounded-full transition-colors duration-200"
-          >
-            Sign In
-          </button>
-        </header>
-        <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
-          <FinderScreen 
-            hospitalId="8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d"
-            onSendAlert={handleSendAlert}
-            showArrivalAck={showArrivalAck}
-          />
-        </main>
-        <footer className="bg-transparent py-6">
-          <div className="max-w-7xl mx-auto px-6 text-center text-xs text-gray-400">
-            <span>&copy; {new Date().getFullYear()} CareFlow Systems. Public Regional Directory.</span>
-          </div>
-        </footer>
-        <ChatbotWidget userRole="guest" />
-      </div>
-    );
+    return <LoginPage onLoginSuccess={() => {}} />;
   }
 
   // Patient Portal View
