@@ -15,8 +15,8 @@ export interface UserSession {
 interface AuthContextType {
   token: string | null;
   user: UserSession | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  patientLogin: (upid: string, pin: string, email?: string, password?: string) => Promise<boolean>;
+  login: (email: string, password: string, requiredRole?: "admin" | "staff") => Promise<{ success: boolean; error?: string }>;
+  patientLogin: (upid: string, pin: string, email?: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   patientRegister: (data: any) => Promise<boolean>;
   hospitalOwnerRegister: (data: any) => Promise<any>;
   hospitalOwnerVerifyOtp: (email: string, otp: string) => Promise<boolean>;
@@ -62,27 +62,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, requiredRole?: "admin" | "staff"): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, requiredRole })
       });
       if (res.ok) {
         const data = await res.json();
         setToken(data.token);
         setUser(data.user);
-        return true;
+        return { success: true };
       }
-      return false;
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, error: errData.error || "Invalid credentials" };
     } catch (err) {
       console.error(err);
-      return false;
+      return { success: false, error: "Network error occurred" };
     }
   };
 
-  const patientLogin = async (upid: string, pin: string, email?: string, password?: string): Promise<boolean> => {
+  const patientLogin = async (upid: string, pin: string, email?: string, password?: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const body: any = {};
       if (email && password) {
@@ -102,12 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await res.json();
         setToken(data.token);
         setUser(data.user);
-        return true;
+        return { success: true };
       }
-      return false;
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, error: errData.error || "Invalid patient credentials" };
     } catch (err) {
       console.error(err);
-      return false;
+      return { success: false, error: "Network error occurred" };
     }
   };
 

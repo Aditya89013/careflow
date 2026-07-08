@@ -52,11 +52,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const success = await login(adminEmail, adminPassword);
-      if (success) {
+      const result = await login(adminEmail, adminPassword, "admin");
+      if (result.success) {
         onLoginSuccess();
       } else {
-        setError("Invalid admin email or password");
+        setError(result.error || "Invalid admin email or password");
       }
     } catch {
       setError("An unexpected error occurred during admin login");
@@ -72,11 +72,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const success = await login(staffId, staffPassword);
-      if (success) {
+      const result = await login(staffId, staffPassword, "staff");
+      if (result.success) {
         onLoginSuccess();
       } else {
-        setError("Invalid Employee ID or password");
+        setError(result.error || "Invalid Employee ID or password");
       }
     } catch {
       setError("An unexpected error occurred during staff login");
@@ -91,27 +91,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      let success = false;
+      let result = { success: false, error: "" };
       if (useLegacyLogin) {
         if (!patientUpid || !patientPin) {
           setError("UPID and PIN are required");
           setLoading(false);
           return;
         }
-        success = await patientLogin(patientUpid, patientPin);
+        result = await patientLogin(patientUpid, patientPin);
       } else {
         if (!patientEmail || !patientPassword) {
           setError("Email and password are required");
           setLoading(false);
           return;
         }
-        success = await patientLogin("", "", patientEmail, patientPassword);
+        result = await patientLogin("", "", patientEmail, patientPassword);
       }
 
-      if (success) {
+      if (result.success) {
         onLoginSuccess();
       } else {
-        setError(useLegacyLogin ? "Invalid UPID or PIN" : "Invalid email or password");
+        setError(result.error || (useLegacyLogin ? "Invalid UPID or PIN" : "Invalid email or password"));
       }
     } catch {
       setError("An unexpected error occurred during patient login");

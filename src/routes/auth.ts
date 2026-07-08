@@ -19,6 +19,10 @@ router.post("/auth/login", async (req: Request, res: Response) => {
 
   try {
     if (email === "superadmin@careflow.com" && password === "admin123") {
+      const { requiredRole } = req.body;
+      if (requiredRole === "staff") {
+        return res.status(403).json({ error: "Access denied. Use the Hospital Admin login portal instead." });
+      }
       const token = jwt.sign(
         {
           sub: "super-admin-id",
@@ -105,6 +109,17 @@ router.post("/auth/login", async (req: Request, res: Response) => {
 
     if (!matchedUser) {
       return res.status(401).json({ error: "Invalid ID/Email or password" });
+    }
+
+    const { requiredRole } = req.body;
+    if (requiredRole) {
+      const isAdminRole = ["admin", "medical_director", "super_admin"].includes(matchedUser.role);
+      if (requiredRole === "admin" && !isAdminRole) {
+        return res.status(403).json({ error: "Access denied. Use the Employee login portal instead." });
+      }
+      if (requiredRole === "staff" && isAdminRole) {
+        return res.status(403).json({ error: "Access denied. Use the Hospital Admin login portal instead." });
+      }
     }
 
     const token = jwt.sign(
