@@ -41,6 +41,10 @@ export interface MockDbSchema {
   attendance_connectors: any[];
   attendance_devices: any[];
   attendance_events: any[];
+  infrastructure: any[];
+  resources: any[];
+  employees: any[];
+  treatment_sessions: any[];
 }
 
 // Load OSM Delhi hospitals
@@ -239,7 +243,33 @@ export const mockDb: MockDbSchema = {
   payroll_records: [],
   attendance_connectors: [],
   attendance_devices: [],
-  attendance_events: []
+  attendance_events: [],
+  infrastructure: [
+    { id: "ward-icu", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", type: "ICU", total_capacity: 10, current_occupancy: 2 },
+    { id: "ward-ccu", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", type: "CCU", total_capacity: 5, current_occupancy: 1 },
+    { id: "ward-general", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", type: "General", total_capacity: 30, current_occupancy: 5 }
+  ],
+  resources: [
+    { id: "res-vent-1", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", ward_id: "ward-icu", type: "Ventilator", status: "In-Use" },
+    { id: "res-vent-2", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", ward_id: "ward-icu", type: "Ventilator", status: "Available" },
+    { id: "res-cyl-1", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", ward_id: "ward-general", type: "Oxygen Cylinder", status: "Available" },
+    { id: "res-cyl-2", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", ward_id: "ward-general", type: "Oxygen Cylinder", status: "In-Use" }
+  ],
+  employees: [
+    { id: "s1", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Sarah Smith", email: "sarah.smith@careflow.com", role: "Doctor", current_shift: "Morning", assigned_ward_id: "ward-icu", password_hash: "doctor123" },
+    { id: "s2", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "John Connor", email: "john.connor@careflow.com", role: "Nurse", current_shift: "Evening", assigned_ward_id: "ward-icu", password_hash: "nurse123" },
+    { id: "s-receptionist", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Rita Receptionist", email: "receptionist@careflow.com", role: "Receptionist", current_shift: "Morning", assigned_ward_id: "ward-general", password_hash: "receptionist123" },
+    { id: "s-doctor", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Rajesh Kumar", email: "doctor@careflow.com", role: "Doctor", current_shift: "Morning", assigned_ward_id: "ward-icu", password_hash: "doctor123" },
+    { id: "s-nurse", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Priyanka Nurse", email: "nurse@careflow.com", role: "Nurse", current_shift: "Night", assigned_ward_id: "ward-icu", password_hash: "nurse123" },
+    { id: "s-wardboy", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Wayne Wardboy", email: "wardboy@careflow.com", role: "Ward Boy", current_shift: "Morning", assigned_ward_id: "ward-general", password_hash: "wardboy123" },
+    { id: "s-labtech", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Larry Labtech", email: "labtech@careflow.com", role: "Lab Tech", current_shift: "Morning", assigned_ward_id: "ward-general", password_hash: "labtech123" },
+    { id: "s-pharmacist", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Peter Pharmacist", email: "pharmacist@careflow.com", role: "Pharmacist", current_shift: "Morning", assigned_ward_id: "ward-general", password_hash: "pharmacist123" },
+    { id: "s-md", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Milton Director", email: "md@careflow.com", role: "medical_director", current_shift: "Morning", assigned_ward_id: "ward-icu", password_hash: "md123" },
+    { id: "s-admin", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", name: "Arthur Admin", email: "admin@careflow.com", role: "admin", current_shift: "Morning", assigned_ward_id: "ward-general", password_hash: "admin123" }
+  ],
+  treatment_sessions: [
+    { id: "ts-mock-1", patient_id: "CF-2026-MOCKPT", hospital_id: "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d", assigned_employee_id: "s-doctor", resource_used_ids: ["res-vent-1"], status: "Admitted", health_issue_description: "Patient has severe respiratory distress, oxygen level is 88%. Initiated invasive mechanical ventilation." }
+  ]
 };
 
 // Database Query Executer
@@ -694,8 +724,8 @@ export class SqlHospitalRepository implements HospitalRepository {
       `INSERT INTO universal_patients (upid, pin_hash, account_active, admitted_hospital_id, admitted_at, discharged_at, 
                                        first_name, last_name, date_of_birth, gender, blood_group, phone, 
                                        emergency_contact_name, emergency_contact_phone, allergies, chronic_conditions, 
-                                       current_medications, insurance_provider, insurance_policy_number, admission_history)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+                                       current_medications, insurance_provider, insurance_policy_number, admission_history, current_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
       [
         patient.upid, patient.pin_hash, patient.account_active, patient.admitted_hospital_id || null, 
         patient.admitted_at || null, patient.discharged_at || null,
@@ -703,7 +733,8 @@ export class SqlHospitalRepository implements HospitalRepository {
         patient.emergency_contact_name, patient.emergency_contact_phone,
         JSON.stringify(patient.allergies), JSON.stringify(patient.chronic_conditions), JSON.stringify(patient.current_medications),
         patient.insurance_provider || null, patient.insurance_policy_number || null,
-        JSON.stringify(patient.admission_history)
+        JSON.stringify(patient.admission_history),
+        patient.current_status || "Discharged"
       ]
     );
     return patient;
@@ -722,8 +753,9 @@ export class SqlHospitalRepository implements HospitalRepository {
                                      discharged_at = $5, first_name = $6, last_name = $7, date_of_birth = $8, gender = $9, 
                                      blood_group = $10, phone = $11, emergency_contact_name = $12, emergency_contact_phone = $13, 
                                      allergies = $14, chronic_conditions = $15, current_medications = $16, 
-                                     insurance_provider = $17, insurance_policy_number = $18, admission_history = $19
-       WHERE upid = $20`,
+                                     insurance_provider = $17, insurance_policy_number = $18, admission_history = $19,
+                                     current_status = $20
+       WHERE upid = $21`,
       [
         patient.pin_hash, patient.account_active, patient.admitted_hospital_id || null, patient.admitted_at || null,
         patient.discharged_at || null, patient.first_name, patient.last_name, patient.date_of_birth, patient.gender,
@@ -731,6 +763,7 @@ export class SqlHospitalRepository implements HospitalRepository {
         JSON.stringify(patient.allergies), JSON.stringify(patient.chronic_conditions), JSON.stringify(patient.current_medications),
         patient.insurance_provider || null, patient.insurance_policy_number || null,
         JSON.stringify(patient.admission_history),
+        patient.current_status || "Discharged",
         patient.upid
       ]
     );
@@ -1225,4 +1258,154 @@ export class SqlHospitalRepository implements HospitalRepository {
       [state.last_sync_at, state.last_sync_status, state.last_error, state.records_synced ?? 0, connectorId]
     );
   }
+
+  public async getInfrastructure(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.infrastructure.filter(i => i.hospital_id === this.hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM infrastructure WHERE hospital_id = $1", [this.hospitalId]);
+    return res.rows;
+  }
+
+  public async addInfrastructure(inf: any): Promise<any> {
+    if (useMockDb) {
+      const newInf = { ...inf, id: inf.id || `inf-${Date.now()}`, hospital_id: this.hospitalId };
+      mockDb.infrastructure.push(newInf);
+      return newInf;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO infrastructure (id, hospital_id, type, total_capacity, current_occupancy)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [inf.id || `inf-${Date.now()}`, this.hospitalId, inf.type, inf.total_capacity, inf.current_occupancy || 0]
+    );
+    return res.rows[0];
+  }
+
+  public async getResources(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.resources.filter(r => r.hospital_id === this.hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM resources WHERE hospital_id = $1", [this.hospitalId]);
+    return res.rows;
+  }
+
+  public async addResource(res: any): Promise<any> {
+    if (useMockDb) {
+      const newRes = { ...res, id: res.id || `res-${Date.now()}`, hospital_id: this.hospitalId };
+      mockDb.resources.push(newRes);
+      return newRes;
+    }
+    const dbRes = await executeQuery(this.hospitalId,
+      `INSERT INTO resources (id, hospital_id, ward_id, type, status)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [res.id || `res-${Date.now()}`, this.hospitalId, res.ward_id || null, res.type, res.status || "Available"]
+    );
+    return dbRes.rows[0];
+  }
+
+  public async updateResourceStatus(id: string, status: string): Promise<void> {
+    if (useMockDb) {
+      const r = mockDb.resources.find(res => res.id === id);
+      if (r) r.status = status;
+      return;
+    }
+    await executeQuery(this.hospitalId, "UPDATE resources SET status = $1 WHERE id = $2", [status, id]);
+  }
+
+  public async getEmployees(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.employees.filter(e => e.hospital_id === this.hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE hospital_id = $1", [this.hospitalId]);
+    return res.rows;
+  }
+
+  public async addEmployee(emp: any): Promise<any> {
+    if (useMockDb) {
+      const newEmp = { ...emp, id: emp.id || `EMP-${Date.now()}`, hospital_id: this.hospitalId };
+      mockDb.employees.push(newEmp);
+      return newEmp;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO employees (id, hospital_id, name, email, role, current_shift, assigned_ward_id, password_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [emp.id || `EMP-${Date.now()}`, this.hospitalId, emp.name, emp.email, emp.role, emp.current_shift || "Morning", emp.assigned_ward_id || null, emp.password_hash]
+    );
+    return res.rows[0];
+  }
+
+  public async getEmployeeById(id: string): Promise<any | null> {
+    if (useMockDb) {
+      const emp = mockDb.employees.find(e => e.id === id && e.hospital_id === this.hospitalId);
+      return emp || null;
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE id = $1 AND hospital_id = $2", [id, this.hospitalId]);
+    return res.rows[0] || null;
+  }
+
+  public async getEmployeeByEmail(email: string): Promise<any | null> {
+    if (useMockDb) {
+      const emp = mockDb.employees.find(e => e.email.toLowerCase() === email.toLowerCase());
+      return emp || null;
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE LOWER(email) = LOWER($1)", [email]);
+    return res.rows[0] || null;
+  }
+
+  public async getTreatmentSessions(): Promise<any[]> {
+    if (useMockDb) {
+      return mockDb.treatment_sessions.filter(ts => ts.hospital_id === this.hospitalId);
+    }
+    const res = await executeQuery(this.hospitalId, "SELECT * FROM treatment_sessions WHERE hospital_id = $1", [this.hospitalId]);
+    return res.rows.map((row: any) => ({
+      ...row,
+      resource_used_ids: typeof row.resource_used_ids === "string" ? JSON.parse(row.resource_used_ids) : row.resource_used_ids
+    }));
+  }
+
+  public async addTreatmentSession(ts: any): Promise<any> {
+    if (useMockDb) {
+      const newTs = { ...ts, id: ts.id || `ts-${Date.now()}`, hospital_id: this.hospitalId };
+      mockDb.treatment_sessions.push(newTs);
+      return newTs;
+    }
+    const res = await executeQuery(this.hospitalId,
+      `INSERT INTO treatment_sessions (id, patient_id, hospital_id, assigned_employee_id, resource_used_ids, status, health_issue_description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        ts.id || `ts-${Date.now()}`,
+        ts.patient_id,
+        this.hospitalId,
+        ts.assigned_employee_id || null,
+        JSON.stringify(ts.resource_used_ids || []),
+        ts.status || "Admitted",
+        ts.health_issue_description || ""
+      ]
+    );
+    return res.rows[0];
+  }
+
+  public async updateTreatmentSessionStatus(id: string, status: string): Promise<void> {
+    if (useMockDb) {
+      const ts = mockDb.treatment_sessions.find(t => t.id === id);
+      if (ts) ts.status = status;
+      return;
+    }
+    await executeQuery(this.hospitalId, "UPDATE treatment_sessions SET status = $1 WHERE id = $2", [status, id]);
+  }
+
+  public async updateUniversalPatientPassword(email: string, passwordHash: string): Promise<void> {
+    if (useMockDb) {
+      const patient = mockDb.universal_patients.find(p => p.email?.toLowerCase() === email.toLowerCase());
+      if (patient) {
+        patient.password_hash = passwordHash;
+      }
+      return;
+    }
+    await executeQuery(this.hospitalId,
+      `UPDATE universal_patients SET password_hash = $1 WHERE email = $2`,
+      [passwordHash, email]
+    );
+  }
 }
+

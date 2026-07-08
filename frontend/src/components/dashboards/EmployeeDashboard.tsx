@@ -12,8 +12,6 @@ export const EmployeeDashboard: React.FC = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-
   const fetchEmployeeData = async () => {
     setLoading(true);
     try {
@@ -23,17 +21,17 @@ export const EmployeeDashboard: React.FC = () => {
       });
       if (shiftRes.ok) setShifts(await shiftRes.json());
 
-      // Fetch beds assigned to this department/employee
+      // Fetch beds assigned to this hospital
       const bedsRes = await fetch(`${API_URL}/beds`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (bedsRes.ok) {
         const allBeds = await bedsRes.json();
-        // Filter to occupied beds assigned to this employee's dept
+        // Show occupied beds or beds related to this hospital
         setBeds(allBeds.filter((b: any) => b.status === "occupied" || b.patient_id));
       }
 
-      // Fetch patients under care
+      // Fetch active caseload patients under care
       const patRes = await fetch(`${API_URL}/patients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -52,79 +50,79 @@ export const EmployeeDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="w-full max-w-6xl mx-auto p-4 flex items-center justify-center min-h-screen">
+      <div className="w-full max-w-5xl mx-auto p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Employee Portal...</div>
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Querying staff registries...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4 space-y-6 text-slate-800 bg-white min-h-screen">
+    <div className="w-full max-w-5xl mx-auto p-6 space-y-6 text-slate-900 bg-white min-h-screen font-sans">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-5 gap-4">
         <div>
-          <span className="text-[10px] font-bold tracking-widest text-violet-600 bg-violet-50 px-2 py-0.5 rounded border border-violet-100 uppercase">
-            Staff Employee Portal
+          <span className="text-[9px] font-bold tracking-widest text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
+            Clinician / Staff Workspace
           </span>
           <h2 className="text-xl font-bold mt-2 text-slate-900">
             {user?.first_name} {user?.last_name}
-            <span className="text-sm font-normal text-slate-500 ml-2 capitalize">({user?.role})</span>
+            <span className="text-xs font-normal text-slate-500 ml-2 capitalize">({user?.role})</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Facility: <strong className="text-slate-700">{user?.hospital_name || "Hospital"}</strong>
+          <p className="text-xs text-slate-550 mt-0.5">
+            Facility: <strong className="text-slate-800">{user?.hospital_name || "CareFlow Medical Center"}</strong>
             <span className="mx-2 text-slate-300">·</span>
-            Employee ID: <code className="font-mono bg-slate-50 px-1 rounded text-[11px]">{user?.id}</code>
+            Employee ID: <code className="font-mono bg-slate-50 px-1 rounded text-[11px] text-slate-800">{user?.id}</code>
           </p>
         </div>
         <button
           onClick={logout}
-          className="text-xs font-bold px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600 transition-all"
+          className="text-xs font-bold px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded text-slate-600 transition-all"
         >
           Sign Out
         </button>
       </div>
 
-      {/* Stats Bar */}
+      {/* Stats Overview */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 text-center">
-          <span className="block text-2xl font-black text-slate-900">{shifts.length}</span>
-          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Upcoming Shifts</span>
+        <div className="border border-slate-200 rounded p-4 text-center">
+          <span className="block text-xl font-bold text-slate-900">{shifts.length}</span>
+          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">My Shifts</span>
         </div>
-        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 text-center">
-          <span className="block text-2xl font-black text-slate-900">{beds.length}</span>
-          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Assigned Beds</span>
+        <div className="border border-slate-200 rounded p-4 text-center">
+          <span className="block text-xl font-bold text-slate-900">{beds.length}</span>
+          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Hospital Occupied Beds</span>
         </div>
-        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 text-center">
-          <span className="block text-2xl font-black text-slate-900">{patients.length}</span>
-          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Active Patients</span>
+        <div className="border border-slate-200 rounded p-4 text-center">
+          <span className="block text-xl font-bold text-slate-900">{patients.length}</span>
+          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Active Patient Caseload</span>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex border-b border-slate-250 gap-1 p-0.5 bg-slate-50 rounded border max-w-md">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-            activeTab === "overview" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+          className={`flex-1 py-2 text-xs font-bold uppercase rounded tracking-wider transition-all ${
+            activeTab === "overview" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-900"
           }`}
         >
-          Today's Overview
+          Overview
         </button>
         <button
           onClick={() => setActiveTab("patients")}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-            activeTab === "patients" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+          className={`flex-1 py-2 text-xs font-bold uppercase rounded tracking-wider transition-all ${
+            activeTab === "patients" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-900"
           }`}
         >
-          My Patients
+          Caseload
         </button>
         <button
           onClick={() => setActiveTab("shifts")}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
-            activeTab === "shifts" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+          className={`flex-1 py-2 text-xs font-bold uppercase rounded tracking-wider transition-all ${
+            activeTab === "shifts" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-900"
           }`}
         >
           My Shifts
@@ -135,42 +133,32 @@ export const EmployeeDashboard: React.FC = () => {
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Next Upcoming Shift */}
-          <div className="border border-slate-200 rounded-xl p-6 bg-slate-50 space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Next Shift</h4>
+          {/* Next Shift */}
+          <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Upcoming Shift</h4>
             {shifts.length > 0 ? (
               <div className="space-y-3">
                 {[shifts[0]].map((s: any) => (
-                  <div key={s.id} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h5 className="text-base font-bold text-slate-900 capitalize">{s.shift_type} Shift</h5>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase ${
-                        s.status === "active" ? "bg-green-50 text-green-700 border-green-200" :
-                        s.status === "scheduled" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                        "bg-slate-100 text-slate-500 border-slate-200"
-                      }`}>
+                  <div key={s.id} className="space-y-2 text-xs">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                      <h5 className="text-sm font-bold text-slate-900 capitalize">{s.shift_type} Shift</h5>
+                      <span className="text-[9px] font-bold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full uppercase">
                         {s.status}
                       </span>
                     </div>
-                    <div className="text-xs space-y-1 text-slate-600">
+                    <div className="space-y-1.5 pt-1 text-slate-700">
                       <div className="flex justify-between">
-                        <span>Starts:</span>
+                        <span>Start Time:</span>
                         <strong className="text-slate-900">{new Date(s.start_time).toLocaleString()}</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span>Ends:</span>
+                        <span>End Time:</span>
                         <strong className="text-slate-900">{new Date(s.end_time).toLocaleString()}</strong>
                       </div>
                       {s.bed_number && (
                         <div className="flex justify-between">
                           <span>Assigned Bed:</span>
                           <strong className="text-slate-900 font-mono">{s.bed_number}</strong>
-                        </div>
-                      )}
-                      {s.patient_name && (
-                        <div className="flex justify-between">
-                          <span>Patient:</span>
-                          <strong className="text-slate-900">{s.patient_name}</strong>
                         </div>
                       )}
                     </div>
@@ -182,32 +170,25 @@ export const EmployeeDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Occupied Beds Summary */}
-          <div className="border border-slate-200 rounded-xl p-6 bg-slate-50 space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Occupied Bed Assignments</h4>
+          {/* Occupied Beds */}
+          <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Active Bed Placements</h4>
             {beds.length > 0 ? (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {beds.map((b: any) => (
-                  <div key={b.id} className="flex justify-between items-center border-b border-slate-150 pb-2">
+                  <div key={b.id} className="flex justify-between items-center border-b border-slate-100 pb-2 text-xs text-slate-700">
                     <div>
-                      <span className="text-xs font-bold text-slate-800">{b.bed_number}</span>
-                      <span className="text-[10px] text-slate-400 ml-2 capitalize">({b.type})</span>
+                      <span className="font-bold text-slate-900">{b.bed_number}</span>
+                      <span className="text-[10px] text-slate-450 uppercase ml-2">({b.type})</span>
                     </div>
-                    <div className="text-right">
-                      {b.patient_id && (
-                        <span className="text-[10px] text-slate-500 font-mono">{b.patient_id}</span>
-                      )}
-                      <span className={`block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${
-                        b.status === "occupied" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {b.status}
-                      </span>
-                    </div>
+                    <span className="bg-slate-50 text-slate-700 border px-1.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono">
+                      {b.status}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic">No beds currently assigned to your section.</p>
+              <p className="text-xs text-slate-400 italic">No beds currently occupied.</p>
             )}
           </div>
         </div>
@@ -216,52 +197,47 @@ export const EmployeeDashboard: React.FC = () => {
       {/* Patients Tab */}
       {activeTab === "patients" && (
         <div className="space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Patient Caseload</h4>
+          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Clinical Caseload</h4>
           {patients.length === 0 ? (
-            <div className="border border-dashed border-slate-200 rounded-lg p-12 text-center text-slate-400">
-              <p className="text-sm font-semibold">No patients assigned</p>
-              <p className="text-xs mt-1">No patients are currently assigned to your care or specialty.</p>
+            <div className="border border-dashed border-slate-200 rounded-lg p-8 text-center text-slate-400">
+              <p className="text-xs italic">No active patient caseload assigned to your workspace.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {patients.map((p: any) => (
-                <div key={p.id} className="border border-slate-200 rounded-xl p-5 bg-white shadow-sm space-y-3">
-                  <div className="flex justify-between items-start">
+                <div key={p.id} className="border border-slate-200 rounded p-4 bg-white space-y-3 text-xs">
+                  <div className="flex justify-between items-start pb-2 border-b border-slate-100">
                     <div>
-                      <h5 className="text-sm font-bold text-slate-900">{p.first_name} {p.last_name}</h5>
-                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{p.upid}</p>
+                      <h5 className="text-xs font-bold text-slate-900">{p.first_name} {p.last_name}</h5>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">UPID: {p.upid || "—"}</p>
                     </div>
-                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                      p.triage_level === "critical" ? "bg-red-100 text-red-800 border-red-200" :
-                      p.triage_level === "high" ? "bg-amber-100 text-amber-800 border-amber-200" :
-                      "bg-green-100 text-green-800 border-green-200"
-                    }`}>
+                    <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full">
                       {p.triage_level?.replace("_", " ")}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-750">
                     <div>
-                      <span className="block text-slate-500">Blood Group</span>
-                      <strong className="text-slate-800">{p.blood_group?.replace("_", " ")}</strong>
+                      <span className="block text-slate-450 uppercase text-[9px] font-bold">Blood Group</span>
+                      <strong className="text-slate-800">{p.blood_group || "—"}</strong>
                     </div>
                     <div>
-                      <span className="block text-slate-500">Bed No.</span>
+                      <span className="block text-slate-455 uppercase text-[9px] font-bold">Assigned Bed</span>
                       <strong className="text-slate-800 font-mono">{p.bed_number || "Unassigned"}</strong>
                     </div>
                     <div>
-                      <span className="block text-slate-500">Admitted</span>
+                      <span className="block text-slate-450 uppercase text-[9px] font-bold">Admitted At</span>
                       <strong className="text-slate-800">{p.admitted_at ? new Date(p.admitted_at).toLocaleDateString() : "—"}</strong>
                     </div>
                     <div>
-                      <span className="block text-slate-500">Gender</span>
-                      <strong className="text-slate-800">{p.gender}</strong>
+                      <span className="block text-slate-450 uppercase text-[9px] font-bold">Needs Ventilator</span>
+                      <strong className="text-slate-800">{p.needs_ventilator ? "Yes" : "No"}</strong>
                     </div>
                   </div>
 
                   {p.diet_plan && (
-                    <div className="bg-slate-50 border border-slate-100 rounded p-2.5 text-[11px] text-slate-700 leading-relaxed">
-                      <strong className="text-slate-500 text-[10px] uppercase tracking-wider block mb-1">Diet Plan</strong>
+                    <div className="bg-slate-50 border border-slate-100 rounded p-2.5 text-[11px] text-slate-700 leading-relaxed font-sans">
+                      <strong className="text-slate-500 text-[10px] uppercase block mb-1">AI Care Diet Plan</strong>
                       {p.diet_plan}
                     </div>
                   )}
@@ -275,59 +251,30 @@ export const EmployeeDashboard: React.FC = () => {
       {/* Shifts Tab */}
       {activeTab === "shifts" && (
         <div className="space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">My Full Shift Schedule</h4>
+          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">My Shift Schedule</h4>
           {shifts.length === 0 ? (
-            <div className="border border-dashed border-slate-200 rounded-lg p-12 text-center text-slate-400">
-              <p className="text-sm font-semibold">No shifts scheduled</p>
-              <p className="text-xs mt-1">Your schedule is clear. Contact your supervisor for shift assignments.</p>
+            <div className="border border-dashed border-slate-200 rounded-lg p-8 text-center text-slate-400">
+              <p className="text-xs italic">No scheduled shifts found in registry.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3">
               {shifts.map((s: any) => (
-                <div key={s.id} className="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                          s.shift_type === "night" ? "bg-slate-800 text-white border-slate-600" :
-                          s.shift_type === "evening" ? "bg-indigo-100 text-indigo-700 border-indigo-200" :
-                          "bg-amber-100 text-amber-700 border-amber-200"
-                        }`}>
-                          {s.shift_type}
-                        </span>
-                        <h5 className="text-sm font-bold text-slate-900 capitalize">{s.shift_type} Shift</h5>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 text-xs mt-2">
-                        <div>
-                          <span className="block text-slate-500 text-[10px] uppercase">Start Time</span>
-                          <strong className="text-slate-800">{new Date(s.start_time).toLocaleString()}</strong>
-                        </div>
-                        <div>
-                          <span className="block text-slate-500 text-[10px] uppercase">End Time</span>
-                          <strong className="text-slate-800">{new Date(s.end_time).toLocaleString()}</strong>
-                        </div>
-                        {s.bed_number && (
-                          <div>
-                            <span className="block text-slate-500 text-[10px] uppercase">Assigned Bed</span>
-                            <strong className="text-slate-800 font-mono">{s.bed_number}</strong>
-                          </div>
-                        )}
-                        {s.patient_name && (
-                          <div>
-                            <span className="block text-slate-500 text-[10px] uppercase">Patient</span>
-                            <strong className="text-slate-800">{s.patient_name}</strong>
-                          </div>
-                        )}
-                      </div>
+                <div key={s.id} className="border border-slate-200 rounded p-4 bg-white flex justify-between items-center text-xs">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-slate-100 border border-slate-200 rounded-full text-slate-800">
+                        {s.shift_type}
+                      </span>
+                      <h5 className="font-bold text-slate-900 capitalize">{s.shift_type} Shift</h5>
                     </div>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase whitespace-nowrap ${
-                      s.status === "active" ? "bg-green-50 text-green-700 border-green-200" :
-                      s.status === "completed" ? "bg-slate-100 text-slate-500 border-slate-200" :
-                      "bg-blue-50 text-blue-700 border-blue-200"
-                    }`}>
-                      {s.status}
-                    </span>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+                      <div>Starts: <strong className="text-slate-900">{new Date(s.start_time).toLocaleString()}</strong></div>
+                      <div>Ends: <strong className="text-slate-900">{new Date(s.end_time).toLocaleString()}</strong></div>
+                    </div>
                   </div>
+                  <span className="text-[9px] font-bold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full uppercase font-mono">
+                    {s.status}
+                  </span>
                 </div>
               ))}
             </div>

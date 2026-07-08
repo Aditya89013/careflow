@@ -84,6 +84,7 @@ export interface UniversalPatient {
   // New auth columns
   email?: string;
   password_hash?: string;
+  current_status?: string;
 }
 
 export interface Patient {

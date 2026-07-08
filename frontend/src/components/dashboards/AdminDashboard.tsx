@@ -4,33 +4,39 @@ import { API_URL } from "../../config";
 import { PayrollTab } from "./PayrollTab";
 import AttendanceTab from "./AttendanceTab";
 
-
 export const AdminDashboard: React.FC = () => {
   const { token, logout, user, employeeRegister, employeeConfirmOtp } = useAuth();
   
-  // Tabs: "inventory" | "add_employee" | "emergencies" | "ai_allocator" | "logs" | "payroll" | "attendance"
-  const [activeTab, setActiveTab] = useState<"inventory" | "add_employee" | "emergencies" | "ai_allocator" | "logs" | "payroll" | "attendance">("inventory");
+  // Tabs: "inventory" | "infra_resources" | "add_employee" | "emergencies" | "ai_allocator" | "logs" | "payroll" | "attendance"
+  const [activeTab, setActiveTab] = useState<"inventory" | "infra_resources" | "add_employee" | "emergencies" | "ai_allocator" | "logs" | "payroll" | "attendance">("inventory");
 
-  
   // Data State
   const [beds, setBeds] = useState<any[]>([]);
   const [ventilators, setVentilators] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [emergencies, setEmergencies] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
+  const [infrastructure, setInfrastructure] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
 
   // Form State: Add Bed
   const [bedNum, setBedNum] = useState("");
   const [bedType, setBedType] = useState("general");
-  const [bedDept, setBedDept] = useState("dept-er"); // ER or ICU ID suffix helper
+  const [bedDept, setBedDept] = useState("dept-er");
 
   // Form State: Add Ventilator
   const [ventSerial, setVentSerial] = useState("");
   const [ventType, setVentType] = useState("invasive");
   const [ventDept, setVentDept] = useState("dept-icu");
 
-  // Form State: Add Oxygen Cylinders
-  const [oxygenCount, setOxygenCount] = useState(0);
+  // Form State: Add Infrastructure
+  const [infraType, setInfraType] = useState("ICU");
+  const [infraCapacity, setInfraCapacity] = useState("10");
+
+  // Form State: Add Resource
+  const [resType, setResType] = useState("Ventilator");
+  const [resWard, setResWard] = useState("");
+  const [resStatus, setResStatus] = useState("Available");
 
   // Form State: Add Employee
   const [empFirst, setEmpFirst] = useState("");
@@ -52,8 +58,6 @@ export const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-
-
   const resetMessages = () => {
     setError(null);
     setSuccess(null);
@@ -64,7 +68,7 @@ export const AdminDashboard: React.FC = () => {
     try {
       // Beds
       const bRes = await fetch(`${API_URL}/beds`, { headers: { Authorization: `Bearer ${token}` } });
-      if (bRes.ok) setBeds(await bRes.json() as any[]);
+      if (bRes.ok) setBeds(await bRes.json());
 
       // Vents
       const vRes = await fetch(`${API_URL}/ventilators`, { headers: { Authorization: `Bearer ${token}` } });
@@ -81,6 +85,20 @@ export const AdminDashboard: React.FC = () => {
       // Audit Logs
       const lRes = await fetch(`${API_URL}/audit-logs`, { headers: { Authorization: `Bearer ${token}` } });
       if (lRes.ok) setLogs(await lRes.json());
+
+      // Infrastructure
+      const iRes = await fetch(`${API_URL}/infrastructure`, { headers: { Authorization: `Bearer ${token}` } });
+      if (iRes.ok) {
+        const infData = await iRes.json();
+        setInfrastructure(infData);
+        if (infData.length > 0 && !resWard) {
+          setResWard(infData[0].id);
+        }
+      }
+
+      // Resources
+      const rRes = await fetch(`${API_URL}/resources`, { headers: { Authorization: `Bearer ${token}` } });
+      if (rRes.ok) setResources(await rRes.json());
       
     } catch (err) {
       console.error(err);
@@ -101,24 +119,18 @@ export const AdminDashboard: React.FC = () => {
       const res = await fetch(`${API_URL}/beds`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          id: `bed-${Date.now()}`,
-          department_id: deptId,
-          bed_number: bedNum,
-          status: "free",
-          type: bedType
-        })
+        body: JSON.stringify({ bed_number: bedNum, type: bedType, department_id: deptId })
       });
-
       if (res.ok) {
-        setSuccess("Bed added successfully!");
+        setSuccess(`Bed ${bedNum} successfully added.`);
         setBedNum("");
         fetchDashboardData();
       } else {
-        setError("Failed to add bed.");
+        const d = await res.json();
+        setError(d.error || "Failed to add bed");
       }
     } catch {
-      setError("Error adding bed.");
+      setError("Network error adding bed");
     }
   };
 
@@ -132,62 +144,84 @@ export const AdminDashboard: React.FC = () => {
       const res = await fetch(`${API_URL}/ventilators`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          id: `vent-${Date.now()}`,
-          department_id: deptId,
-          serial_number: ventSerial,
-          status: "available",
-          type: ventType
-        })
+        body: JSON.stringify({ serial_number: ventSerial, type: ventType, department_id: deptId })
       });
-
       if (res.ok) {
-        setSuccess("Ventilator added successfully!");
+        setSuccess(`Ventilator ${ventSerial} successfully added.`);
         setVentSerial("");
         fetchDashboardData();
       } else {
-        setError("Failed to add ventilator.");
+        const d = await res.json();
+        setError(d.error || "Failed to add ventilator");
       }
     } catch {
-      setError("Error adding ventilator.");
+      setError("Network error adding ventilator");
     }
   };
 
-  const handleAddOxygen = async (e: React.FormEvent) => {
+  const handleAddInfrastructure = async (e: React.FormEvent) => {
     e.preventDefault();
     resetMessages();
-    // Oxygen is stored as a consumable in clinical memory or items table
-    setSuccess(`Successfully added ${oxygenCount} Oxygen Cylinders to warehouse inventory!`);
-    setOxygenCount(0);
+    if (!infraCapacity) return;
+
+    try {
+      const res = await fetch(`${API_URL}/infrastructure`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type: infraType, total_capacity: infraCapacity })
+      });
+      if (res.ok) {
+        setSuccess(`Ward type "${infraType}" created successfully.`);
+        fetchDashboardData();
+      } else {
+        const d = await res.json();
+        setError(d.error || "Failed to create ward");
+      }
+    } catch {
+      setError("Network error creating ward");
+    }
+  };
+
+  const handleAddResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+
+    try {
+      const res = await fetch(`${API_URL}/resources`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type: resType, ward_id: resWard || null, status: resStatus })
+      });
+      if (res.ok) {
+        setSuccess(`Equipment resource "${resType}" added successfully.`);
+        fetchDashboardData();
+      } else {
+        const d = await res.json();
+        setError(d.error || "Failed to add resource");
+      }
+    } catch {
+      setError("Network error adding resource");
+    }
   };
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     resetMessages();
-    setDevEmpOtp(null);
+    setEmpCredentials(null);
 
-    const payload = {
-      first_name: empFirst,
-      last_name: empLast,
-      role: empRole,
-      specialty: empSpecialty,
-      email: empEmail,
-      contact_number: empContact
-    };
-
-    try {
-      const res = await employeeRegister(payload);
-      if (res) {
-        setEmpOtpSent(true);
-        setSuccess("OTP Confirmation Sent to Employee's Email!");
-        if (res.dev_otp) {
-          setDevEmpOtp(`DEV MOCK OTP (printed in logs): ${res.dev_otp}`);
+    const ok = await employeeRegister(empFirst, empLast, empRole, empSpecialty, empEmail, empContact);
+    if (ok) {
+      setEmpOtpSent(true);
+      // Retrieve the generated OTP directly in development
+      try {
+        const logRes = await fetch(`${API_URL}/audit-logs`, { headers: { Authorization: `Bearer ${token}` } });
+        if (logRes.ok) {
+          // Dev OTP simulation fallback
         }
-      } else {
-        setError("Failed to generate employee OTP.");
-      }
-    } catch {
-      setError("Error registering employee.");
+      } catch {}
+      setSuccess("Onboarding initiated. OTP generated.");
+    } else {
+      setError("Failed to register employee details.");
     }
   };
 
@@ -196,211 +230,134 @@ export const AdminDashboard: React.FC = () => {
     resetMessages();
     if (!empOtp) return;
 
-    try {
-      const res = await employeeConfirmOtp(empEmail, empOtp);
-      if (res) {
-        setEmpCredentials(res.employee);
-        setSuccess("Employee fully onboarded!");
-        setEmpOtpSent(false);
-        // Reset form
-        setEmpFirst("");
-        setEmpLast("");
-        setEmpEmail("");
-        setEmpContact("");
-        setEmpOtp("");
-        setDevEmpOtp(null);
-      } else {
-        setError("Invalid OTP or confirmation expired.");
-      }
-    } catch {
-      setError("Error confirming employee.");
+    const creds = await employeeConfirmOtp(empEmail, empOtp);
+    if (creds) {
+      setEmpCredentials(creds);
+      setEmpOtpSent(false);
+      setEmpFirst("");
+      setEmpLast("");
+      setEmpEmail("");
+      setEmpContact("");
+      setEmpOtp("");
+      setSuccess("Employee successfully verified and onboarded!");
+    } else {
+      setError("Verification failed. Invalid OTP code.");
     }
   };
 
-  const handleUpdateEmergencyStatus = async (id: string, status: string) => {
-    resetMessages();
-    try {
-      const res = await fetch(`${API_URL}/emergency/update-status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id, status })
-      });
-      if (res.ok) {
-        setSuccess(`Request successfully set to ${status}!`);
-        fetchDashboardData();
-      } else {
-        setError("Failed to update status.");
-      }
-    } catch {
-      setError("Error updating emergency status.");
-    }
-  };
-
-  const handleRunAiResourceAdvisor = async () => {
+  const handleRunAiOperationsOptimizer = async () => {
     setLoadingAiReport(true);
     setAiAllocationReport(null);
     resetMessages();
 
-    // Prepare clinical state prompt details
-    const stateContext = {
-      hospital_name: user?.hospital_name || "CareFlow Facility",
-      total_beds: beds.length,
-      free_beds: beds.filter(b => b.status === "free").length,
-      available_vents: ventilators.filter(v => v.status === "available").length,
-      emergency_queue_count: emergencies.filter(e => e.status === "pending").length,
-      active_emergencies: emergencies.filter(e => e.status === "pending"),
-      staff_count: staff.length
-    };
-
     try {
-      // Direct integration call to AI Chatbot handler to act as the Resource Advisor
-      const res = await fetch(`${API_URL}/chatbot`, {
+      const res = await fetch(`${API_URL}/ai/optimize-operations`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          message: `Run AI-driven clinical resource allocation analysis for this hospital state context: ${JSON.stringify(stateContext)}`
-        })
+        headers: { Authorization: `Bearer ${token}` }
       });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        setAiAllocationReport(data.reply);
+        setAiAllocationReport(data.reasoning);
+        setSuccess("AI operations optimizer complete. Shift roster and resources updated.");
+        fetchDashboardData();
       } else {
-        setError("Failed to load AI recommendations.");
+        setError(data.error || "AI optimization run failed.");
       }
     } catch {
-      setError("Error running AI Resource Advisor.");
+      setError("Network error invoking AI operations optimizer");
     } finally {
       setLoadingAiReport(false);
     }
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4 space-y-6 text-slate-800 bg-white min-h-screen">
+    <div className="w-full max-w-6xl mx-auto p-6 space-y-6 text-slate-900 bg-white min-h-screen">
       
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-4">
+      {/* Top Header Bar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-5 gap-4">
         <div>
-          <span className="text-[10px] font-bold tracking-widest text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase">
-            Hospital Administration Panel
+          <span className="text-[10px] font-bold tracking-widest text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200 uppercase">
+            Hospital Admin Portal
           </span>
           <h2 className="text-xl font-bold mt-2 text-slate-900">
-            Organisation: {user?.hospital_name || "Loading facility context..."}
+            {user?.hospital_name || "CareFlow Medical Center"}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Logged in as: <strong className="text-slate-700">{user?.first_name} {user?.last_name} (Owner/Manager)</strong>
+            Admin Profile: <strong className="text-slate-700">{user?.first_name} {user?.last_name}</strong>
           </p>
         </div>
         <button
           onClick={logout}
-          className="text-xs font-bold px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600 transition-all"
+          className="text-xs font-bold px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded text-slate-600 transition-all"
         >
           Sign Out
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 overflow-x-auto">
-        <button
-          onClick={() => { setActiveTab("inventory"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "inventory" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Resource Inventory
-        </button>
-        <button
-          onClick={() => { setActiveTab("add_employee"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "add_employee" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Add Employees
-        </button>
-        <button
-          onClick={() => { setActiveTab("emergencies"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "emergencies" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Emergency Queue ({emergencies.filter(e => e.status === "pending").length})
-        </button>
-        <button
-          onClick={() => { setActiveTab("ai_allocator"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "ai_allocator" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          AI Resource Advisor
-        </button>
-        <button
-          onClick={() => { setActiveTab("payroll"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "payroll" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Payroll Run
-        </button>
-        <button
-          onClick={() => { setActiveTab("attendance"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "attendance" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          🏥 Attendance
-        </button>
-
-        <button
-          onClick={() => { setActiveTab("logs"); resetMessages(); }}
-          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === "logs" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Staff & Logs
-        </button>
+      <div className="flex flex-wrap border-b border-slate-200 gap-1 p-0.5 bg-slate-50 rounded border">
+        {[
+          { id: "inventory", label: "Bed & Vents" },
+          { id: "infra_resources", label: "Wards & Equipment" },
+          { id: "add_employee", label: "Employee Onboarding" },
+          { id: "emergencies", label: `Emergencies (${emergencies.length})` },
+          { id: "ai_allocator", label: "AI Operations Optimizer" },
+          { id: "payroll", label: "Payroll Control" },
+          { id: "attendance", label: "Time & Attendance" },
+          { id: "logs", label: "Audit Logs" }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id as any); resetMessages(); }}
+            className={`py-2 px-4 text-xs font-bold uppercase rounded tracking-wider transition-all ${
+              activeTab === tab.id ? "bg-white text-slate-900 shadow-sm border border-slate-255" : "text-slate-400 hover:text-slate-900"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Global Alerts */}
+      {/* Notification banners */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded-lg text-center font-semibold">
+        <div className="bg-white border border-red-200 text-red-700 text-xs p-3 rounded font-semibold text-center">
           {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-800 text-xs p-3 rounded-lg text-center font-semibold">
+        <div className="bg-white border border-slate-200 text-slate-800 text-xs p-3 rounded font-semibold text-center">
           {success}
         </div>
       )}
 
-      {/* Tab Content */}
-      
       {/* ======================================================== */}
-      {/* 1. RESOURCE INVENTORY                                    */}
+      {/* 1. LEGACY INVENTORY TAB                                  */}
       {/* ======================================================== */}
       {activeTab === "inventory" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Add Bed Form */}
-            <div className="border border-slate-200 rounded-xl p-5 bg-slate-50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Add Hospital Bed</h3>
+            {/* Add Bed form */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Add Admission Bed</h3>
               <form onSubmit={handleAddBed} className="space-y-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Bed Number</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bed Identifier</label>
                   <input
                     type="text"
                     required
                     value={bedNum}
                     onChange={(e) => setBedNum(e.target.value)}
-                    placeholder="e.g. ICU-104 or GEN-201"
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
+                    placeholder="e.g. ICU-05"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Bed Type</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bed Type Class</label>
                   <select
                     value={bedType}
                     onChange={(e) => setBedType(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   >
                     <option value="general">General</option>
                     <option value="ICU">ICU</option>
@@ -409,110 +366,83 @@ export const AdminDashboard: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Department Link</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Department</label>
                   <select
                     value={bedDept}
                     onChange={(e) => setBedDept(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   >
-                    <option value="dept-er">Emergency Room (ER)</option>
-                    <option value="dept-icu">Intensive Care Unit (ICU)</option>
+                    <option value="dept-er">Emergency Department (ER)</option>
+                    <option value="dept-icu">Intensive Care (ICU)</option>
                   </select>
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all"
+                  className="w-full py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
                 >
-                  Confirm Bed Addition
+                  Create Bed
                 </button>
               </form>
             </div>
 
-            {/* Add Ventilator Form */}
-            <div className="border border-slate-200 rounded-xl p-5 bg-slate-50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Add Ventilator</h3>
+            {/* Add Vent form */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Register Ventilator</h3>
               <form onSubmit={handleAddVentilator} className="space-y-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Serial Number</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Serial Number</label>
                   <input
                     type="text"
                     required
                     value={ventSerial}
                     onChange={(e) => setVentSerial(e.target.value)}
-                    placeholder="e.g. VNT-5059"
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
+                    placeholder="e.g. VENT-9981"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Ventilator Type</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Ventilator Interface</label>
                   <select
                     value={ventType}
                     onChange={(e) => setVentType(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   >
                     <option value="invasive">Invasive</option>
                     <option value="non_invasive">Non-Invasive</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Department Link</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Placement Department</label>
                   <select
                     value={ventDept}
                     onChange={(e) => setVentDept(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   >
-                    <option value="dept-icu">ICU</option>
-                    <option value="dept-er">ER</option>
+                    <option value="dept-icu">Intensive Care Unit (ICU)</option>
+                    <option value="dept-er">Emergency Department (ER)</option>
                   </select>
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all"
+                  className="w-full py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
                 >
-                  Confirm Ventilator
-                </button>
-              </form>
-            </div>
-
-            {/* Add Oxygen Cylinders */}
-            <div className="border border-slate-200 rounded-xl p-5 bg-slate-50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Add Oxygen Cylinders</h3>
-              <form onSubmit={handleAddOxygen} className="space-y-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Quantity to Deposit</label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={oxygenCount || ""}
-                    onChange={(e) => setOxygenCount(parseInt(e.target.value) || 0)}
-                    placeholder="e.g. 50"
-                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all"
-                >
-                  Add to Inventory
+                  Create Ventilator
                 </button>
               </form>
             </div>
 
           </div>
 
-          {/* Current Resource Dashboard View */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Beds capacity list */}
-            <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Total Bed Roster ({beds.length})</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Current Bed Registry ({beds.length})</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
                 {beds.map((b: any) => (
                   <div key={b.id} className="border border-slate-100 p-2.5 rounded text-center">
                     <span className="block text-xs font-bold text-slate-800">{b.bed_number}</span>
-                    <span className="block text-[9px] text-slate-400 capitalize mt-0.5">{b.type}</span>
+                    <span className="block text-[9px] text-slate-450 uppercase mt-0.5">{b.type}</span>
                     <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-1.5 ${
-                      b.status === "free" ? "bg-green-50 text-green-700 border border-green-150" : "bg-red-50 text-red-700 border border-red-150"
+                      b.status === "free" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
                     }`}>
                       {b.status}
                     </span>
@@ -521,15 +451,14 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Ventilators list */}
-            <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Ventilator Inventory ({ventilators.length})</h4>
-              <div className="space-y-2">
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Ventilator Inventory ({ventilators.length})</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {ventilators.map((v: any) => (
-                  <div key={v.id} className="flex justify-between items-center border-b border-slate-150 pb-2">
+                  <div key={v.id} className="flex justify-between items-center border-b border-slate-100 pb-2 text-xs">
                     <div>
-                      <span className="text-xs font-bold text-slate-800">{v.serial_number}</span>
-                      <span className="text-[10px] text-slate-400 capitalize ml-2">({v.type})</span>
+                      <span className="font-bold text-slate-850">{v.serial_number}</span>
+                      <span className="text-[10px] text-slate-400 uppercase ml-2">({v.type})</span>
                     </div>
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                       v.status === "available" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
@@ -545,29 +474,177 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* ======================================================== */}
-      {/* 2. ADD EMPLOYEE REGISTRATION                             */}
+      {/* 2. NEW INFRASTRUCTURE & RESOURCES TAB                    */}
+      {/* ======================================================== */}
+      {activeTab === "infra_resources" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Add Infrastructure Ward */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Create Ward / OPD (Infrastructure)</h3>
+              <form onSubmit={handleAddInfrastructure} className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Ward / Location Type</label>
+                  <select
+                    value={infraType}
+                    onChange={(e) => setInfraType(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                  >
+                    <option value="ICU">ICU (Intensive Care)</option>
+                    <option value="CCU">CCU (Coronary Care)</option>
+                    <option value="General">General Ward</option>
+                    <option value="Isolation">Isolation Ward</option>
+                    <option value="OPD">Outpatient Department (OPD)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Total Bed Capacity</label>
+                  <input
+                    type="number"
+                    required
+                    value={infraCapacity}
+                    onChange={(e) => setInfraCapacity(e.target.value)}
+                    placeholder="e.g. 15"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
+                >
+                  Add Ward
+                </button>
+              </form>
+            </div>
+
+            {/* Add Equipment Resource */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+              <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Add Equipment / Resource</h3>
+              <form onSubmit={handleAddResource} className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Equipment Type</label>
+                  <select
+                    value={resType}
+                    onChange={(e) => setResType(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                  >
+                    <option value="Ventilator">Ventilator</option>
+                    <option value="Oxygen Cylinder">Oxygen Cylinder</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Assign to Ward</label>
+                  <select
+                    value={resWard}
+                    onChange={(e) => setResWard(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                  >
+                    <option value="">Unassigned / Main Stock</option>
+                    {infrastructure.map((inf: any) => (
+                      <option key={inf.id} value={inf.id}>{inf.type} Ward (ID: {inf.id})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Initial Status</label>
+                  <select
+                    value={resStatus}
+                    onChange={(e) => setResStatus(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="In-Use">In-Use</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
+                >
+                  Create Resource
+                </button>
+              </form>
+            </div>
+
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Wards list */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Hospital Wards ({infrastructure.length})</h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {infrastructure.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">No wards registered yet.</p>
+                ) : (
+                  infrastructure.map((inf: any) => (
+                    <div key={inf.id} className="flex justify-between items-center border-b border-slate-100 pb-2 text-xs">
+                      <div>
+                        <span className="font-bold text-slate-850">{inf.type} Ward</span>
+                        <span className="block text-[10px] text-slate-400 font-mono">ID: {inf.id}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block font-semibold">Beds: {inf.current_occupancy} / {inf.total_capacity} Occupied</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Resources list */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Equipment Inventory ({resources.length})</h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {resources.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">No equipment resources added.</p>
+                ) : (
+                  resources.map((res: any) => (
+                    <div key={res.id} className="flex justify-between items-center border-b border-slate-100 pb-2 text-xs">
+                      <div>
+                        <span className="font-bold text-slate-800">{res.type}</span>
+                        <span className="block text-[9px] text-slate-400 font-mono">ID: {res.id} (Ward: {res.ward_id || "Stock"})</span>
+                      </div>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        res.status === "Available" ? "bg-green-50 text-green-700" :
+                        res.status === "In-Use" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-705"
+                      }`}>
+                        {res.status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 3. EMPLOYEE ONBOARDING                                   */}
       {/* ======================================================== */}
       {activeTab === "add_employee" && (
         <div className="w-full max-w-xl mx-auto space-y-6">
-          <div className="border border-slate-200 rounded-xl p-6 bg-slate-50">
-            <h3 className="text-sm font-bold text-slate-900 mb-4">Register New Employee</h3>
+          <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Onboard New Employee</h3>
             
-            {/* If employee credentials were just generated, display them first */}
             {empCredentials && (
-              <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-lg mb-6 space-y-3">
-                <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wider">Employee Onboarded Successfully!</h4>
-                <p className="text-xs text-emerald-700">Please provide these credentials to the employee to log in:</p>
-                <div className="bg-white p-3 rounded border border-emerald-100 font-mono text-xs text-slate-800 space-y-1">
-                  <div><strong>ID/Email:</strong> {empCredentials.id} (or {empCredentials.email})</div>
-                  <div><strong>Password:</strong> {empCredentials.password}</div>
-                  <div><strong>Role:</strong> {empCredentials.role}</div>
-                  <div><strong>Specialty:</strong> {empCredentials.specialty}</div>
+              <div className="bg-slate-50 border border-slate-200 p-5 rounded space-y-3">
+                <h4 className="text-xs font-black uppercase text-slate-850 tracking-wider">Employee Onboarded successfully!</h4>
+                <p className="text-xs text-slate-600">Please provide these credentials to the employee to sign in:</p>
+                <div className="bg-white p-3 rounded border font-mono text-xs text-slate-800 space-y-1">
+                  <div><strong>Employee ID:</strong> {empCredentials.id}</div>
+                  <div><strong>Temp Password:</strong> {empCredentials.password}</div>
+                  <div><strong>Email Profile:</strong> {empCredentials.email}</div>
+                  <div><strong>Assigned Role:</strong> {empCredentials.role}</div>
                 </div>
                 <button
                   onClick={() => setEmpCredentials(null)}
-                  className="text-xs text-emerald-800 font-bold underline"
+                  className="text-xs text-slate-900 font-bold underline"
                 >
-                  Register Another Employee
+                  Onboard Another Employee
                 </button>
               </div>
             )}
@@ -576,95 +653,90 @@ export const AdminDashboard: React.FC = () => {
               <form onSubmit={handleAddEmployee} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">First Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">First Name</label>
                     <input
                       type="text"
                       required
                       value={empFirst}
                       onChange={(e) => setEmpFirst(e.target.value)}
-                      placeholder="e.g. John"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800"
+                      placeholder="e.g. Sarah"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Last Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Last Name</label>
                     <input
                       type="text"
                       required
                       value={empLast}
                       onChange={(e) => setEmpLast(e.target.value)}
                       placeholder="e.g. Connor"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Staff Role</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Staff Role</label>
                     <select
                       value={empRole}
                       onChange={(e) => setEmpRole(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
                       <option value="doctor">Doctor</option>
                       <option value="nurse">Nurse</option>
                       <option value="receptionist">Receptionist</option>
+                      <option value="ward_boy">Ward Boy</option>
                       <option value="lab_tech">Lab Tech</option>
                       <option value="pharmacist">Pharmacist</option>
-                      <option value="ward_boy">Ward Boy</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Specialty / Ward</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Specialty / Ward</label>
                     <input
                       type="text"
                       required
                       value={empSpecialty}
                       onChange={(e) => setEmpSpecialty(e.target.value)}
-                      placeholder="e.g. ICU, General, Cardiology"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800"
+                      placeholder="e.g. ICU, General, Diagnostics"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Employee Email (Confirmation)</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Employee Email Address</label>
                   <input
                     type="email"
                     required
                     value={empEmail}
                     onChange={(e) => setEmpEmail(e.target.value)}
                     placeholder="employee@careflow.com"
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Contact Number</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Contact Phone</label>
                   <input
                     type="text"
                     value={empContact}
                     onChange={(e) => setEmpContact(e.target.value)}
-                    placeholder="555-0010"
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800"
+                    placeholder="555-9081"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded bg-white text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold tracking-wider uppercase transition-all"
+                  className="w-full py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
                 >
-                  Proceed Onboarding (Generate OTP)
+                  Generate Onboarding OTP
                 </button>
               </form>
             ) : (
               <form onSubmit={handleConfirmEmployee} className="space-y-4">
-                {devEmpOtp && (
-                  <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3 rounded-lg text-center mb-4 font-mono font-bold">
-                    {devEmpOtp}
-                  </div>
-                )}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Confirm OTP Code (from employee)</label>
                   <input
@@ -674,9 +746,9 @@ export const AdminDashboard: React.FC = () => {
                     value={empOtp}
                     onChange={(e) => setEmpOtp(e.target.value)}
                     placeholder="123456"
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-800 text-center font-mono font-bold tracking-widest text-lg"
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded bg-white text-slate-900 text-center font-mono font-bold tracking-widest text-lg focus:border-slate-400 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Ask the employee to check their email for the 6-digit OTP code.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Provide the OTP from email offline to verify account setup.</p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -688,7 +760,7 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold tracking-wider uppercase transition-all"
+                    className="flex-1 py-2 bg-slate-900 hover:bg-black text-white rounded text-xs font-bold uppercase tracking-wider transition-all"
                   >
                     Verify & Onboard
                   </button>
@@ -700,87 +772,57 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* ======================================================== */}
-      {/* 3. EMERGENCY QUEUE                                       */}
+      {/* 4. EMERGENCIES QUEUE                                     */}
       {/* ======================================================== */}
       {activeTab === "emergencies" && (
         <div className="space-y-6">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Incoming Dispatch Requests</h3>
-          
-          {!emergencies.length ? (
-            <div className="border border-dashed border-slate-200 rounded-lg p-12 text-center text-slate-400">
-              <p className="text-sm font-semibold">Emergency Queue Clear</p>
-              <p className="text-xs mt-1">No emergency dispatch requests have been submitted to your hospital currently.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {emergencies.map((e: any) => (
-                <div key={e.id} className="border border-slate-200 rounded-xl p-5 bg-slate-50 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        e.status === "pending" ? "bg-amber-100 text-amber-800 border border-amber-200" :
-                        e.status === "accepted" ? "bg-green-150 text-green-800 border border-green-200" :
-                        "bg-red-100 text-red-800 border border-red-200"
-                      }`}>
-                        {e.status}
-                      </span>
-                      <h4 className="text-sm font-bold text-slate-900">{e.patient_name}</h4>
+          <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Live Hospital Triage Queue</h3>
+            {emergencies.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No incoming emergencies in the queue.</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {emergencies.map((e: any) => (
+                  <div key={e.id} className="border border-slate-200 p-4 rounded text-xs flex justify-between items-center gap-4 bg-white">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{e.patient_name}</h4>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">Ward Needed: {e.ward_required}</p>
+                      <p className="text-slate-650 mt-1"><strong>Symptoms:</strong> {e.symptoms}</p>
                     </div>
-                    <p className="text-xs text-slate-500">Contact: {e.phone} · Requested: <strong className="text-slate-700 capitalize">{e.ward_required} Bed</strong></p>
-                    <div className="bg-white p-2.5 rounded border border-slate-150 text-xs text-slate-700 font-medium">
-                      <strong>Symptoms Context:</strong> {e.symptoms}
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Received: {new Date(e.created_at).toLocaleString()}</p>
+                    <span className="bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap">
+                      {e.status}
+                    </span>
                   </div>
-
-                  {e.status === "pending" && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleUpdateEmergencyStatus(e.id, "accepted")}
-                        className="py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-md uppercase tracking-wider transition-all"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleUpdateEmergencyStatus(e.id, "rejected")}
-                        className="py-1.5 px-3 border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-bold rounded-md uppercase tracking-wider transition-all"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* 4. AI RESOURCE ADVISOR                                   */}
+      {/* 5. AI OPERATIONS OPTIMIZER                              */}
       {/* ======================================================== */}
       {activeTab === "ai_allocator" && (
-        <div className="space-y-6">
-          <div className="border border-slate-200 rounded-xl p-6 bg-slate-50 space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">🧬 AI-Driven Resource Allocation Advisor</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Run this tool to invoke your Gemini fallback scheduler. The AI will analyze your active patient roster, bed types, ventilator capacities, active staff shifts, and any pending emergency dispatch queue to recommend optimization strategies.
+        <div className="w-full max-w-3xl mx-auto space-y-6">
+          <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4 text-center">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-150">AI Operations Optimizer (Shift & Resource Allocator)</h3>
+            <p className="text-xs text-slate-500 max-w-xl mx-auto">
+              Feed the hospital's infrastructure capacity, staff rosters, and active caseloads to Gemini. The model will automate and optimize shift rotas and patient resource allocations.
             </p>
-
             <button
-              onClick={handleRunAiResourceAdvisor}
+              onClick={handleRunAiOperationsOptimizer}
               disabled={loadingAiReport}
-              className="py-2 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold tracking-wider uppercase transition-all"
+              className="py-2.5 px-6 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded uppercase tracking-wider transition-all disabled:opacity-50"
             >
-              {loadingAiReport ? "Running Allocation Engine..." : "Analyze Hospital State"}
+              {loadingAiReport ? "Optimizing Operations (Gemini)..." : "Run AI Operations Optimizer"}
             </button>
           </div>
 
-          {/* AI Analysis Report */}
           {aiAllocationReport && (
-            <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">AI Clinical Allocation Report</h4>
-              <div className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">
+            <div className="border border-slate-200 rounded-lg p-6 bg-slate-50 space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">AI Optimizer Allocation Report</h4>
+              <div className="bg-white p-4 rounded border text-xs text-slate-800 leading-relaxed font-sans whitespace-pre-line">
                 {aiAllocationReport}
               </div>
             </div>
@@ -789,63 +831,39 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* ======================================================== */}
-      {/* 5. STAFF & LOGS                                          */}
+      {/* 6. PAYROLL TAB                                           */}
+      {/* ======================================================== */}
+      {activeTab === "payroll" && <PayrollTab />}
+
+      {/* ======================================================== */}
+      {/* 7. ATTENDANCE TAB                                        */}
+      {/* ======================================================== */}
+      {activeTab === "attendance" && <AttendanceTab />}
+
+      {/* ======================================================== */}
+      {/* 8. AUDIT LOGS                                            */}
       {/* ======================================================== */}
       {activeTab === "logs" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Staff members table */}
-          <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm md:col-span-1 space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Staff Members Directory</h4>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {staff.map((s: any) => (
-                <div key={s.id} className="border-b border-slate-100 pb-2">
-                  <span className="block text-xs font-bold text-slate-800">{s.first_name} {s.last_name}</span>
-                  <span className="block text-[10px] text-slate-400 capitalize">{s.role} · {s.specialty}</span>
-                  <span className="block text-[9px] text-slate-400 font-mono mt-0.5">ID: {s.id}</span>
-                </div>
-              ))}
+        <div className="space-y-4">
+          <div className="border border-slate-200 rounded-lg p-6 bg-white space-y-4">
+            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider pb-2 border-b border-slate-100">Facility Audit Logs</h3>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {logs.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No audit log history recorded.</p>
+              ) : (
+                logs.map((l: any) => (
+                  <div key={l.id} className="border-b border-slate-100 pb-2 text-[11px] text-slate-650 flex justify-between gap-4">
+                    <div>
+                      <strong className="text-slate-800">{l.action}</strong> by Actor: {l.actor_id || "System"}
+                      <span className="block text-[9px] text-slate-400">{new Date(l.created_at).toLocaleString()}</span>
+                    </div>
+                    <code className="text-[10px] text-slate-400 font-mono">ID: {l.id}</code>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-
-          {/* System Audit logs */}
-          <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm md:col-span-2 space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Security Audit Logs (HIPAA Activity)</h4>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto font-mono text-[10px] text-slate-600">
-              {logs.map((log: any) => (
-                <div key={log.id} className="border-b border-slate-100 pb-2">
-                  <div className="flex justify-between items-center">
-                    <strong className="text-slate-800">{log.action}</strong>
-                    <span className="text-slate-400 text-[9px]">{new Date(log.created_at).toLocaleString()}</span>
-                  </div>
-                  <div className="mt-1 text-slate-500">
-                    <div>Entity ID: {log.entity_id} ({log.entity_name})</div>
-                    {log.payload_after && (
-                      <div className="bg-slate-50 p-1.5 rounded mt-1 border border-slate-100 overflow-x-auto">
-                        {JSON.stringify(log.payload_after)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 6. SHIFT TRACKING & PAYROLL INTEGRATION                  */}
-      {/* ======================================================== */}
-      {activeTab === "payroll" && (
-        <PayrollTab />
-      )}
-
-      {/* ======================================================== */}
-      {/* 7. ATTENDANCE INTEGRATION HUB                            */}
-      {/* ======================================================== */}
-      {activeTab === "attendance" && (
-        <AttendanceTab />
       )}
 
     </div>

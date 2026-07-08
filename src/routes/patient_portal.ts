@@ -144,6 +144,9 @@ Vitals: ${JSON.stringify(p.vitals || {})}`;
         });
       }
     }
+    // Retrieve active treatment sessions for the logged-in customer
+    const treatmentSessions = await mainRepo.getTreatmentSessions();
+    const mySessions = treatmentSessions.filter(ts => ts.patient_id === upid);
 
     return res.status(200).json({
       customer: {
@@ -153,7 +156,8 @@ Vitals: ${JSON.stringify(p.vitals || {})}`;
         phone: customer.phone,
         email: customer.email
       },
-      treatments: activeTreatments
+      treatments: activeTreatments,
+      treatment_sessions: mySessions
     });
   } catch (err: any) {
     console.error("Patient treatments error:", err);

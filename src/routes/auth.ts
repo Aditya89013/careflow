@@ -13,7 +13,7 @@ const DEFAULT_HOSPITAL_ID = "8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d";
 router.post("/auth/login", async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required" });
+    return res.status(400).json({ error: "Email/ID and password are required" });
   }
 
   try {
@@ -42,18 +42,76 @@ router.post("/auth/login", async (req: Request, res: Response) => {
     }
 
     const repo = new SqlHospitalRepository(DEFAULT_HOSPITAL_ID);
-    const staffMember = await repo.getStaffByEmail(email);
+    let matchedUser: any = null;
 
-    if (!staffMember || staffMember.password_hash !== password) {
-      return res.status(401).json({ error: "Invalid email or password" });
+    if (!email.includes("@")) {
+      // Treat as Employee ID: check new employees table
+      const emp = await repo.getEmployeeById(email);
+      if (emp) {
+        if (emp.password_hash === password) {
+          const names = emp.name.split(" ");
+          matchedUser = {
+            id: emp.id,
+            first_name: names[0] || "Staff",
+            last_name: names.slice(1).join(" ") || "Member",
+            email: emp.email,
+            role: emp.role,
+            hospital_id: emp.hospital_id
+          };
+        }
+      } else {
+        // Fallback: check legacy staff_members table
+        const staff = await repo.getStaffByEmailOrId(email);
+        if (staff && staff.password_hash === password) {
+          matchedUser = {
+            id: staff.id,
+            first_name: staff.first_name,
+            last_name: staff.last_name,
+            email: staff.email,
+            role: staff.role,
+            hospital_id: staff.hospital_id
+          };
+        }
+      }
+    } else {
+      // Treat as Admin / Staff Email: check legacy staff_members
+      const staff = await repo.getStaffByEmail(email);
+      if (staff && staff.password_hash === password) {
+        matchedUser = {
+          id: staff.id,
+          first_name: staff.first_name,
+          last_name: staff.last_name,
+          email: staff.email,
+          role: staff.role,
+          hospital_id: staff.hospital_id
+        };
+      } else {
+        // Check new employees table by email
+        const emp = await repo.getEmployeeByEmail(email);
+        if (emp && emp.password_hash === password) {
+          const names = emp.name.split(" ");
+          matchedUser = {
+            id: emp.id,
+            first_name: names[0] || "Staff",
+            last_name: names.slice(1).join(" ") || "Member",
+            email: emp.email,
+            role: emp.role,
+            hospital_id: emp.hospital_id
+          };
+        }
+      }
+    }
+
+    if (!matchedUser) {
+      return res.status(401).json({ error: "Invalid ID/Email or password" });
     }
 
     const token = jwt.sign(
       {
-        sub: staffMember.id,
-        hospital_id: staffMember.hospital_id,
-        role: staffMember.role,
-        name: `${staffMember.first_name} ${staffMember.last_name}`
+        sub: matchedUser.id,
+        hospital_id: matchedUser.hospital_id,
+        role: matchedUser.role,
+        name: `${matchedUser.first_name} ${matchedUser.last_name}`
       },
       JWT_SECRET,
       { expiresIn: "8h" }
@@ -61,14 +119,7 @@ router.post("/auth/login", async (req: Request, res: Response) => {
 
     return res.status(200).json({
       token,
-      user: {
-        id: staffMember.id,
-        first_name: staffMember.first_name,
-        last_name: staffMember.last_name,
-        email: staffMember.email,
-        role: staffMember.role,
-        hospital_id: staffMember.hospital_id
-      }
+      user: matchedUser
     });
   } catch (err: any) {
     console.error(err);
@@ -362,7 +413,7 @@ router.post("/auth/employee/confirm-otp", authMiddleware, async (req: Request, r
     const employeeId = `EMP-${randomDigits}`;
     const password = Math.random().toString(36).substring(2, 10); // 8-char random password
 
-    // Create staff member
+    // Create staff member (legacy table sync)
     const newStaff = await repo.addStaffMember({
       id: employeeId,
       auth_user_id: `user_emp_${randomDigits}`,
@@ -372,6 +423,18 @@ router.post("/auth/employee/confirm-otp", authMiddleware, async (req: Request, r
       specialty: payload.specialty,
       contact_number: payload.contact_number,
       email: payload.email,
+      password_hash: password
+    });
+
+    // Create employee (new table sync)
+    await repo.addEmployee({
+      id: employeeId,
+      hospital_id: hospitalId,
+      name: `${payload.first_name} ${payload.last_name}`,
+      email: payload.email,
+      role: payload.role,
+      current_shift: "Morning",
+      assigned_ward_id: null,
       password_hash: password
     });
 
@@ -394,6 +457,69 @@ router.post("/auth/employee/confirm-otp", authMiddleware, async (req: Request, r
   } catch (err: any) {
     console.error(err);
     return res.status(500).json({ error: "Failed to confirm employee onboarding", details: err.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────
+// Forgot Password Routes
+// ──────────────────────────────────────────────────────────────────
+router.post("/auth/patient/forgot-password", async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  try {
+    const repo = new SqlHospitalRepository(DEFAULT_HOSPITAL_ID);
+    const patient = await repo.getUniversalPatientByEmail(email);
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient with this email does not exist" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Save to otp_verifications
+    await repo.saveOtp(email, otp, "patient_forgot_password", { email });
+
+    console.log(`\n======================================================`);
+    printDevLog(`[CareFlow Mail] Forgot Password OTP for ${email}: ${otp}`);
+    console.log(`======================================================\n`);
+
+    return res.status(200).json({
+      message: "Forgot password OTP sent to email",
+      dev_otp: otp
+    });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to process forgot password request", details: err.message });
+  }
+});
+
+router.post("/auth/patient/reset-password", async (req: Request, res: Response) => {
+  const { email, otp, new_password } = req.body;
+  if (!email || !otp || !new_password) {
+    return res.status(400).json({ error: "Email, OTP, and new password are required" });
+  }
+
+  try {
+    const repo = new SqlHospitalRepository(DEFAULT_HOSPITAL_ID);
+    const payload = await repo.verifyOtp(email, otp, "patient_forgot_password");
+
+    if (!payload) {
+      return res.status(400).json({ error: "Invalid or expired reset password OTP" });
+    }
+
+    // Update password
+    await repo.updateUniversalPatientPassword(email, new_password);
+
+    return res.status(200).json({
+      message: "Password reset successful. You can now login with your new password."
+    });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to reset patient password", details: err.message });
   }
 });
 

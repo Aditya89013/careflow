@@ -90,6 +90,25 @@ router.post(
   }
 );
 
+// 2.5 GET /shifts/my
+router.get(
+  "/shifts/my",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const hospitalId = req.user!.hospitalId;
+    const employeeId = req.user!.userId;
+    try {
+      const repo = new SqlHospitalRepository(hospitalId);
+      const shifts = await repo.getShifts();
+      const myShifts = shifts.filter(s => s.staff_member_id === employeeId);
+      return res.status(200).json(myShifts);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Failed to fetch my shifts" });
+    }
+  }
+);
+
 // 3. GET /shifts
 router.get(
   "/shifts",

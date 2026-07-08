@@ -219,3 +219,44 @@ CREATE POLICY shift_isolation ON shifts FOR ALL USING (hospital_id = get_current
 CREATE POLICY shift_hist_isolation ON shift_histories FOR ALL USING (hospital_id = get_current_hospital_id()) WITH CHECK (hospital_id = get_current_hospital_id());
 CREATE POLICY inventory_isolation ON inventory_items FOR ALL USING (hospital_id = get_current_hospital_id()) WITH CHECK (hospital_id = get_current_hospital_id());
 CREATE POLICY audit_isolation ON audit_logs FOR ALL USING (hospital_id = get_current_hospital_id()) WITH CHECK (hospital_id = get_current_hospital_id());
+
+-- 13. AI-driven Resource Allocation Model tables
+ALTER TABLE universal_patients ADD COLUMN IF NOT EXISTS current_status VARCHAR(50) DEFAULT 'Discharged';
+
+CREATE TABLE IF NOT EXISTS infrastructure (
+    id VARCHAR(100) PRIMARY KEY,
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    type VARCHAR(100) NOT NULL, -- ICU, CCU, General, etc.
+    total_capacity INT NOT NULL,
+    current_occupancy INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS resources (
+    id VARCHAR(100) PRIMARY KEY,
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    ward_id VARCHAR(100),
+    type VARCHAR(100) NOT NULL, -- Ventilator, Oxygen Cylinder
+    status VARCHAR(50) NOT NULL DEFAULT 'Available' -- Available, In-Use, Maintenance
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+    id VARCHAR(100) PRIMARY KEY,
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    role VARCHAR(100) NOT NULL, -- Doctor, Nurse, Ward Boy
+    current_shift VARCHAR(50),
+    assigned_ward_id VARCHAR(100),
+    password_hash VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS treatment_sessions (
+    id VARCHAR(100) PRIMARY KEY,
+    patient_id VARCHAR(100) NOT NULL REFERENCES universal_patients(upid) ON DELETE CASCADE,
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+    assigned_employee_id VARCHAR(100) REFERENCES employees(id) ON DELETE SET NULL,
+    resource_used_ids JSONB DEFAULT '[]'::jsonb, -- array of resource ids
+    status VARCHAR(50) NOT NULL DEFAULT 'Admitted', -- Discharged, Admitted, Seeking Emergency
+    health_issue_description TEXT
+);
+
