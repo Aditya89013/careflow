@@ -1521,3 +1521,12 @@ export async function seedDatabase(): Promise<void> {
   }
 }
 
+// Auto-seed database once when module is loaded in serverless environments
+(async () => {
+  try {
+    await seedDatabase();
+  } catch (err) {
+    console.error("[CareFlow Seed] Database auto-seeding failed on module load:", err);
+  }
+})();
+
