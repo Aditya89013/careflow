@@ -212,6 +212,9 @@ export const AdminDashboard: React.FC = () => {
     const ok = await employeeRegister({ first_name: empFirst, last_name: empLast, role: empRole, specialty: empSpecialty, email: empEmail, contact_number: empContact });
     if (ok) {
       setEmpOtpSent(true);
+      if (ok.dev_otp) {
+        setEmpOtp(ok.dev_otp);
+      }
       // Retrieve the generated OTP directly in development
       try {
         const logRes = await fetch(`${API_URL}/audit-logs`, { headers: { Authorization: `Bearer ${token}` } });

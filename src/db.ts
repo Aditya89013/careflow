@@ -726,8 +726,8 @@ export class SqlHospitalRepository implements HospitalRepository {
       `INSERT INTO universal_patients (upid, pin_hash, account_active, admitted_hospital_id, admitted_at, discharged_at, 
                                        first_name, last_name, date_of_birth, gender, blood_group, phone, 
                                        emergency_contact_name, emergency_contact_phone, allergies, chronic_conditions, 
-                                       current_medications, insurance_provider, insurance_policy_number, admission_history, current_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+                                       current_medications, insurance_provider, insurance_policy_number, admission_history, current_status, email, password_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
       [
         patient.upid, patient.pin_hash, patient.account_active, patient.admitted_hospital_id || null, 
         patient.admitted_at || null, patient.discharged_at || null,
@@ -736,7 +736,9 @@ export class SqlHospitalRepository implements HospitalRepository {
         JSON.stringify(patient.allergies), JSON.stringify(patient.chronic_conditions), JSON.stringify(patient.current_medications),
         patient.insurance_provider || null, patient.insurance_policy_number || null,
         JSON.stringify(patient.admission_history),
-        patient.current_status || "Discharged"
+        patient.current_status || "Discharged",
+        patient.email || null,
+        patient.password_hash || null
       ]
     );
     return patient;
@@ -1420,6 +1422,12 @@ export async function seedDatabase(): Promise<void> {
   const client = await pool.connect();
   try {
     console.log("[CareFlow Seed] Starting database seeding...");
+
+    // 0. Ensure schema migrations for recent additions
+    await client.query(`
+      ALTER TABLE universal_patients ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
+      ALTER TABLE universal_patients ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+    `);
 
     // 1. Hospitals
     await client.query(`
