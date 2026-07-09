@@ -1429,6 +1429,23 @@ export async function seedDatabase(): Promise<void> {
       ALTER TABLE universal_patients ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
     `);
 
+    // Add email + password_hash to staff_members if not already present
+    await client.query(`
+      ALTER TABLE staff_members ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
+      ALTER TABLE staff_members ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+    `);
+
+    // Expand role ENUM to include all clinical roles used by the app
+    await client.query(`
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'doctor';       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'nurse';        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'receptionist'; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'ward_boy';     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'lab_technician';  EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'pharmacist';   EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN ALTER TYPE staff_role ADD VALUE IF NOT EXISTS 'medical_director'; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+
     // 1. Hospitals
     await client.query(`
       INSERT INTO hospitals (id, name, latitude, longitude, address, contact_phone)
@@ -1445,18 +1462,21 @@ export async function seedDatabase(): Promise<void> {
       ON CONFLICT (id) DO NOTHING
     `);
 
-    // 3. Staff Members
+    // 3. Staff Members — UUIDs for all IDs, valid ENUM values
     await client.query(`
       INSERT INTO staff_members (id, hospital_id, department_id, auth_user_id, first_name, last_name, role, specialty, contact_number, email, password_hash, is_active)
       VALUES
-      ('s1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_smith', 'Sarah', 'Smith', 'dept_head', 'doctor', '555-1234', 'sarah@careflow.com', 'password123', true),
-      ('s2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_connor', 'John', 'Connor', 'staff', 'nurse', '555-5678', 'john@careflow.com', 'password123', true),
-      ('s-receptionist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_receptionist', 'Rita', 'Receptionist', 'receptionist', 'support', '555-0001', 'receptionist@careflow.com', 'password123', true),
-      ('s-doctor', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_doctor', 'Dr. Rajesh', 'Kumar', 'doctor', 'doctor', '555-0002', 'doctor@careflow.com', 'password123', true),
-      ('s-nurse', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_nurse', 'Priyanka', 'Sharma', 'nurse', 'nurse', '555-0003', 'nurse@careflow.com', 'password123', true),
-      ('s-wardboy', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_wardboy', 'Wayne', 'Wardboy', 'ward_boy', 'support', '555-0004', 'wardboy@careflow.com', 'password123', true),
-      ('s-admin', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'user_admin', 'Adam', 'Admin', 'admin', 'support', '555-0008', 'admin@careflow.com', 'password123', true)
-      ON CONFLICT (id) DO NOTHING
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567891', 'Sarah',    'Smith',       'doctor',           'doctor',  '555-1234', 'sarah@careflow.com',        'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567892', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567893', 'John',     'Connor',      'nurse',            'nurse',   '555-5678', 'john@careflow.com',         'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567894', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567895', 'Rita',     'Receptionist','receptionist',     'support', '555-0001', 'receptionist@careflow.com', 'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567896', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567897', 'Rajesh',   'Kumar',       'doctor',           'doctor',  '555-0002', 'doctor@careflow.com',       'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567898', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567899', 'Priyanka', 'Sharma',      'nurse',            'nurse',   '555-0003', 'nurse@careflow.com',        'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567900', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567901', 'Wayne',    'Wardboy',     'ward_boy',         'support', '555-0004', 'wardboy@careflow.com',      'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567902', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567903', 'Larry',    'Labtech',     'lab_technician',   'support', '555-0005', 'labtech@careflow.com',      'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567904', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567905', 'Peter',    'Pharmacist',  'pharmacist',       'support', '555-0006', 'pharmacist@careflow.com',   'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567906', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567907', 'Milton',   'Director',    'medical_director', 'doctor',  '555-0007', 'md@careflow.com',           'password123', true),
+      ('a1b2c3d4-e5f6-7890-abcd-ef1234567908', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'd2d2d2d2-e3e3-f4f4-0505-161616161616', 'b1c2d3e4-f5a6-7890-abcd-ef1234567909', 'Adam',     'Admin',       'admin',            'support', '555-0008', 'admin@careflow.com',        'password123', true)
+      ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, is_active = true
     `);
 
     // 4. Universal Patients
@@ -1471,7 +1491,7 @@ export async function seedDatabase(): Promise<void> {
     await client.query(`
       INSERT INTO patients (id, hospital_id, upid, first_name, last_name, date_of_birth, triage_level, required_department_code, needs_ventilator, status, vitals, admitted_at)
       VALUES
-      ('p-mock-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'CF-2026-MOCKPT', 'Sarah', 'Connor', '1985-11-10', '2_emergent', 'ICU', false, 'admitted', '{"hr": "82", "bp": "118/75", "o2": "97%", "oxygenation_source": "SpO2", "is_delirious": false}'::jsonb, NOW() - INTERVAL '24 hours')
+      ('p-mock-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'CF-2026-MOCKPT', 'Sarah', 'Connor', '1985-11-10', '2_emergent', 'ICU', false, 'waiting', '{"hr": "82", "bp": "118/75", "o2": "97%", "oxygenation_source": "SpO2", "is_delirious": false}'::jsonb, NOW() - INTERVAL '24 hours')
       ON CONFLICT (id) DO NOTHING
     `);
 
@@ -1479,8 +1499,8 @@ export async function seedDatabase(): Promise<void> {
     await client.query(`
       INSERT INTO infrastructure (id, hospital_id, type, total_capacity, current_occupancy)
       VALUES
-      ('ward-icu', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ICU', 10, 2),
-      ('ward-ccu', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'CCU', 5, 1),
+      ('ward-icu',     '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ICU',     10, 2),
+      ('ward-ccu',     '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'CCU',     5,  1),
       ('ward-general', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'General', 30, 5)
       ON CONFLICT (id) DO NOTHING
     `);
@@ -1489,27 +1509,27 @@ export async function seedDatabase(): Promise<void> {
     await client.query(`
       INSERT INTO resources (id, hospital_id, ward_id, type, status)
       VALUES
-      ('res-vent-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-icu', 'Ventilator', 'In-Use'),
-      ('res-vent-2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-icu', 'Ventilator', 'Available'),
-      ('res-cyl-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-general', 'Oxygen Cylinder', 'Available'),
-      ('res-cyl-2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-general', 'Oxygen Cylinder', 'In-Use')
+      ('res-vent-1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-icu',     'Ventilator',      'In-Use'),
+      ('res-vent-2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-icu',     'Ventilator',      'Available'),
+      ('res-cyl-1',  '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-general', 'Oxygen Cylinder', 'Available'),
+      ('res-cyl-2',  '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'ward-general', 'Oxygen Cylinder', 'In-Use')
       ON CONFLICT (id) DO NOTHING
     `);
 
-    // 8. Employees
+    // 8. Employees (employee login table — separate from staff_members)
     await client.query(`
       INSERT INTO employees (id, hospital_id, name, email, role, current_shift, assigned_ward_id, password_hash)
       VALUES
-      ('s1', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Sarah Smith', 'sarah.smith@careflow.com', 'Doctor', 'Morning', 'ward-icu', 'doctor123'),
-      ('s2', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'John Connor', 'john.connor@careflow.com', 'Nurse', 'Evening', 'ward-icu', 'nurse123'),
-      ('s-receptionist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Rita Receptionist', 'receptionist@careflow.com', 'Receptionist', 'Morning', 'ward-general', 'receptionist123'),
-      ('s-doctor', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Rajesh Kumar', 'doctor@careflow.com', 'Doctor', 'Morning', 'ward-icu', 'doctor123'),
-      ('s-nurse', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Priyanka Nurse', 'nurse@careflow.com', 'Nurse', 'Night', 'ward-icu', 'nurse123'),
-      ('s-wardboy', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Wayne Wardboy', 'wardboy@careflow.com', 'Ward Boy', 'Morning', 'ward-general', 'wardboy123'),
-      ('s-labtech', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Larry Labtech', 'labtech@careflow.com', 'Lab Tech', 'Morning', 'ward-general', 'labtech123'),
-      ('s-pharmacist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Peter Pharmacist', 'pharmacist@careflow.com', 'Pharmacist', 'Morning', 'ward-general', 'pharmacist123'),
-      ('s-md', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Milton Director', 'md@careflow.com', 'medical_director', 'Morning', 'ward-icu', 'md123'),
-      ('s-admin', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Arthur Admin', 'admin@careflow.com', 'admin', 'Morning', 'ward-general', 'admin123')
+      ('s1',             '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Sarah Smith',       'sarah.smith@careflow.com',  'Doctor',           'Morning', 'ward-icu',     'doctor123'),
+      ('s2',             '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'John Connor',       'john.connor@careflow.com',  'Nurse',            'Evening', 'ward-icu',     'nurse123'),
+      ('s-receptionist', '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Rita Receptionist', 'receptionist@careflow.com', 'Receptionist',     'Morning', 'ward-general', 'receptionist123'),
+      ('s-doctor',       '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Rajesh Kumar',      'doctor@careflow.com',       'Doctor',           'Morning', 'ward-icu',     'doctor123'),
+      ('s-nurse',        '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Priyanka Sharma',   'nurse@careflow.com',        'Nurse',            'Night',   'ward-icu',     'nurse123'),
+      ('s-wardboy',      '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Wayne Wardboy',     'wardboy@careflow.com',      'Ward Boy',         'Morning', 'ward-general', 'wardboy123'),
+      ('s-labtech',      '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Larry Labtech',     'labtech@careflow.com',      'Lab Tech',         'Morning', 'ward-general', 'labtech123'),
+      ('s-pharmacist',   '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Peter Pharmacist',  'pharmacist@careflow.com',   'Pharmacist',       'Morning', 'ward-general', 'pharmacist123'),
+      ('s-md',           '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Milton Director',   'md@careflow.com',           'medical_director', 'Morning', 'ward-icu',     'md123'),
+      ('s-admin',        '8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d', 'Arthur Admin',      'admin@careflow.com',        'admin',            'Morning', 'ward-general', 'admin123')
       ON CONFLICT (id) DO NOTHING
     `);
 

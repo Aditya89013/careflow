@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { SqlHospitalRepository, mockDb } from "../db";
 import { authMiddleware, requireRole } from "../middleware/auth";
+import * as crypto from "crypto";
 
 const router = Router();
 
@@ -68,7 +69,7 @@ router.post("/super-admin/hospitals", authMiddleware, requireRole(["super_admin"
       }
     }
 
-    const hospitalId = `hosp-${Date.now()}`;
+    const hospitalId = crypto.randomUUID();
     const newHospital = await repo.addHospital({
       id: hospitalId,
       name,
@@ -85,14 +86,14 @@ router.post("/super-admin/hospitals", authMiddleware, requireRole(["super_admin"
     // Create owner account if requested
     let newOwner = null;
     if (owner_email) {
-      const ownerId = `s-owner-${Date.now()}`;
+      const ownerId = crypto.randomUUID();
       newOwner = await hospitalRepo.addStaffMember({
         id: ownerId,
-        auth_user_id: `user_owner_${Date.now()}`,
+        auth_user_id: crypto.randomUUID(),
         first_name: owner_first_name,
         last_name: owner_last_name,
         role: "admin",
-        specialty: "management",
+        specialty: "support",    // staff_specialty ENUM: doctor | nurse | support
         contact_number: contact_phone,
         email: owner_email,
         password_hash: owner_password
