@@ -574,6 +574,27 @@ export class SqlHospitalRepository implements HospitalRepository {
         allocation.allocated_at
       ]
     );
+
+    // Update patient status to 'allocated' so they disappear from waiting/admitted lists
+    await executeQuery(this.hospitalId,
+      `UPDATE patients SET status = 'allocated' WHERE id = $1`,
+      [allocation.patient_id]
+    );
+
+    // Update bed status to 'occupied'
+    await executeQuery(this.hospitalId,
+      `UPDATE beds SET status = 'occupied' WHERE id = $1`,
+      [allocation.bed_id]
+    );
+
+    // Update ventilator status to 'in_use' if it was allocated
+    if (allocation.ventilator_id) {
+      await executeQuery(this.hospitalId,
+        `UPDATE ventilators SET status = 'in_use' WHERE id = $1`,
+        [allocation.ventilator_id]
+      );
+    }
+
     return res.rows[0];
   }
 
