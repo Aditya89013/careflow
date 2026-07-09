@@ -14,6 +14,8 @@ import clinicalRouter from "./routes/clinical";
 import emergencyRouter from "./routes/emergency";
 import patientPortalRouter from "./routes/patient_portal";
 import superAdminRouter from "./routes/super_admin";
+import payrollRouter from "./routes/payroll";
+import attendanceRouter from "./routes/attendance_integration";
 import { subscriptions } from "./ws_events";
 import { seedDatabase } from "./db";
 
@@ -41,6 +43,9 @@ app.use("/api/v1", clinicalRouter);
 app.use("/api/v1", emergencyRouter);
 app.use("/api/v1", patientPortalRouter);
 app.use("/api/v1", superAdminRouter);
+app.use("/api/v1", payrollRouter);
+app.use("/", attendanceRouter);
+
 
 // Set up server
 const server = http.createServer(app);
