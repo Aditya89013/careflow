@@ -40,17 +40,17 @@ export const PharmacistDashboard: React.FC = () => {
   return (
     <div className="space-y-8 font-sans">
       {/* Header bar */}
-      <div className="bg-gradient-to-r from-violet-900/30 to-violet-950/15 border border-violet-800/40 p-6 rounded-2xl flex justify-between items-center shadow-lg">
+      <div className="bg-gradient-to-r from-violet-50 to-violet-100/50 border border-violet-200/60 p-6 rounded-2xl flex justify-between items-center shadow-sm">
         <div>
-          <span className="bg-violet-500/10 border border-violet-500/25 text-violet-400 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md">
+          <span className="bg-violet-100 border border-violet-200/60 text-violet-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md">
             PHARMACY MANAGEMENT CONSOLE
           </span>
-          <h2 className="text-xl font-black text-white mt-3">Prescription Verification & Dispensing</h2>
-          <p className="text-slate-400 text-xs mt-1">Review clinical orders and manage formulary stocks</p>
+          <h2 className="text-xl font-black text-slate-900 mt-3">Prescription Verification & Dispensing</h2>
+          <p className="text-slate-550 text-xs mt-1">Review clinical orders and manage formulary stocks</p>
         </div>
         <button
           onClick={logout}
-          className="bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-bold py-2 px-4 rounded-xl transition duration-150 active:scale-95"
+          className="bg-white border border-slate-200 hover:border-slate-350 text-slate-700 text-xs font-bold py-2 px-4 rounded-xl transition duration-150 active:scale-95 shadow-sm"
         >
           Sign Out
         </button>
@@ -59,36 +59,36 @@ export const PharmacistDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Prescription Queue */}
-        <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800/80 p-6 rounded-2xl shadow-sm space-y-4">
-          <h3 className="text-xs font-black text-violet-400 uppercase tracking-wider">Prescription Dispensing Queue</h3>
+        <div className="lg:col-span-2 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4">
+          <h3 className="text-xs font-black text-violet-600 uppercase tracking-wider">Prescription Dispensing Queue</h3>
           
           <div className="space-y-4">
             {prescriptions.map(p => (
-              <div key={p.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+              <div key={p.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <span className="text-[9px] font-mono text-slate-500">{p.id}</span>
+                    <span className="text-[9px] font-mono text-slate-400">{p.id}</span>
                     <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
-                      p.priority === "STAT" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-slate-800 text-slate-400 border border-slate-700"
+                      p.priority === "STAT" ? "bg-red-100 text-red-700 border border-red-200/55" : "bg-slate-100 text-slate-600 border border-slate-250"
                     }`}>
                       {p.priority}
                     </span>
                   </div>
-                  <h4 className="text-xs font-bold text-white mt-1">{p.patientName}</h4>
-                  <p className="text-xs text-violet-300 font-semibold">{p.drug} <span className="text-slate-500">x{p.quantity}</span></p>
-                  <p className="text-[9px] text-slate-500">Ordered by: {p.physician}</p>
+                  <h4 className="text-xs font-bold text-slate-800 mt-1">{p.patientName}</h4>
+                  <p className="text-xs text-violet-750 font-semibold">{p.drug} <span className="text-slate-400">x{p.quantity}</span></p>
+                  <p className="text-[9px] text-slate-500 font-medium">Ordered by: {p.physician}</p>
                 </div>
 
                 <div>
                   {p.status === "pending" ? (
                     <button
                       onClick={() => handleDispense(p.id, p.drug, p.quantity)}
-                      className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2 px-4 rounded-xl transition duration-150 active:scale-95"
+                      className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2 px-4 rounded-xl transition duration-150 active:scale-97 shadow-sm"
                     >
                       Verify & Dispense
                     </button>
                   ) : (
-                    <span className="text-xs text-emerald-400 font-bold uppercase">✔ DISPENSED</span>
+                    <span className="text-xs text-emerald-650 font-bold uppercase">✔ DISPENSED</span>
                   )}
                 </div>
               </div>
@@ -97,20 +97,20 @@ export const PharmacistDashboard: React.FC = () => {
         </div>
 
         {/* Formulary Stock Tracker */}
-        <div className="bg-slate-900/50 border border-slate-800/80 p-6 rounded-2xl shadow-sm space-y-4">
-          <h3 className="text-xs font-black text-violet-400 uppercase tracking-wider">Formulary Stock levels</h3>
+        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4">
+          <h3 className="text-xs font-black text-violet-600 uppercase tracking-wider">Formulary Stock levels</h3>
           
           <div className="space-y-3">
             {inventory.map(i => {
               const lowStock = i.stock < i.threshold;
               return (
-                <div key={i.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div key={i.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
                   <div>
-                    <h4 className="text-xs font-bold text-white">{i.name}</h4>
+                    <h4 className="text-xs font-bold text-slate-800">{i.name}</h4>
                     <p className="text-[10px] text-slate-500 font-semibold mt-1">Min Threshold: {i.threshold} {i.unit}</p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-black ${lowStock ? "text-red-500" : "text-white"}`}>
+                    <p className={`text-sm font-black ${lowStock ? "text-red-600" : "text-slate-900"}`}>
                       {i.stock}
                     </p>
                     <span className="text-[9px] text-slate-500 font-bold uppercase">{i.unit}</span>

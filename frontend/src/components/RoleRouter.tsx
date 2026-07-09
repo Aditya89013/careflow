@@ -4,6 +4,13 @@ import { PatientDashboard } from "./dashboards/PatientDashboard";
 import { AdminDashboard } from "./dashboards/AdminDashboard";
 import { EmployeeDashboard } from "./dashboards/EmployeeDashboard";
 import { SuperAdminDashboard } from "./dashboards/SuperAdminDashboard";
+import { DoctorDashboard } from "./dashboards/DoctorDashboard";
+import { NurseDashboard } from "./dashboards/NurseDashboard";
+import { ReceptionistDashboard } from "./dashboards/ReceptionistDashboard";
+import { LabTechDashboard } from "./dashboards/LabTechDashboard";
+import { PharmacistDashboard } from "./dashboards/PharmacistDashboard";
+import { WardBoyDashboard } from "./dashboards/WardBoyDashboard";
+import { MDDashboard } from "./dashboards/MDDashboard";
 
 export const RoleRouter: React.FC = () => {
   const { user } = useAuth();
@@ -24,16 +31,25 @@ export const RoleRouter: React.FC = () => {
     case "admin":
       return <AdminDashboard />;
 
-    // ── Staff / Employee roles ────────────────────────────────────────────
+    // ── Specialized Clinical Staff ─────────────────────────────────────────
     case "receptionist":
+      return <ReceptionistDashboard />;
     case "doctor":
-    case "dept_head":
+      return <DoctorDashboard />;
     case "nurse":
-    case "staff":
-    case "ward_boy":
+      return <NurseDashboard />;
     case "lab_tech":
+      return <LabTechDashboard />;
     case "pharmacist":
+      return <PharmacistDashboard />;
+    case "ward_boy":
+      return <WardBoyDashboard />;
     case "medical_director":
+    case "dept_head":
+      return <MDDashboard />;
+
+    // ── Generic Staff / Employee fallback ──────────────────────────────────
+    case "staff":
     case "employee":
     default:
       return <EmployeeDashboard />;

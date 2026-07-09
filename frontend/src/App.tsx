@@ -77,6 +77,30 @@ function MainApp() {
   const { isAuthenticated, user, logout, token } = useAuth();
   const [activeTab, setActiveTab] = useState<"dashboard" | "intake" | "finder" | "shifts">("dashboard");
   const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  // Auto-correct activeTab selection on role switch / login
+  useEffect(() => {
+    if (!user) return;
+    const allowedTabs = ["dashboard", "intake", "finder", "shifts"].filter(tabId => {
+      if (user.role === "super_admin") {
+        return tabId === "dashboard";
+      }
+      if (user.role === "admin" || user.role === "hospital_owner") {
+        return tabId === "dashboard" || tabId === "shifts";
+      }
+      if (user.role === "doctor" || user.role === "nurse" || user.role === "medical_director" || user.role === "dept_head") {
+        return true;
+      }
+      if (user.role === "receptionist") {
+        return tabId === "dashboard" || tabId === "intake" || tabId === "shifts";
+      }
+      return tabId === "dashboard" || tabId === "shifts";
+    });
+    if (!allowedTabs.includes(activeTab)) {
+      setActiveTab("dashboard");
+    }
+  }, [user, activeTab]);
+
   const [outbox, setOutbox] = useState<any[]>([]);
   const [logs, setLogs] = useState<string[]>([
     "CareFlow Central Command initialized.",
@@ -442,7 +466,23 @@ function MainApp() {
             { id: "intake", label: "Triage & Allocation" },
             { id: "finder", label: "Emergency Finder" },
             { id: "shifts", label: "Staff Scheduling" }
-          ].map(tab => (
+          ].filter(tab => {
+            if (!user) return false;
+            if (user.role === "super_admin") {
+              return tab.id === "dashboard";
+            }
+            if (user.role === "admin" || user.role === "hospital_owner") {
+              return tab.id === "dashboard" || tab.id === "shifts";
+            }
+            if (user.role === "doctor" || user.role === "nurse" || user.role === "medical_director" || user.role === "dept_head") {
+              return true; // all tabs allowed
+            }
+            if (user.role === "receptionist") {
+              return tab.id === "dashboard" || tab.id === "intake" || tab.id === "shifts";
+            }
+            // fallback for other staff (lab_tech, pharmacist, ward_boy, employee)
+            return tab.id === "dashboard" || tab.id === "shifts";
+          }).map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
