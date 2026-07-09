@@ -485,6 +485,7 @@ function MainApp() {
               shifts={shifts}
               onGenerateShifts={handleGenerateShifts}
               onSwapRequest={handleSwapRequest}
+              userRole={user?.role}
             />
           )}
         </div>

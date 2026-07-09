@@ -14,7 +14,7 @@ const ALL_STAFF_ROLES = [
 router.post(
   "/shifts/generate",
   authMiddleware,
-  requireRole(["admin", "medical_director", "dept_head", "doctor", "nurse", "receptionist"]),
+  requireRole(["admin", "hospital_owner"]),
   async (req: Request, res: Response) => {
     const { start_date, end_date } = req.body;
     const hospitalId = req.user!.hospitalId;

@@ -5,12 +5,14 @@ interface ShiftsScreenProps {
   shifts: Shift[];
   onGenerateShifts: (payload: any) => Promise<void>;
   onSwapRequest: (payload: any) => Promise<void>;
+  userRole?: string;
 }
 
 export const ShiftsScreen: React.FC<ShiftsScreenProps> = ({
   shifts,
   onGenerateShifts,
-  onSwapRequest
+  onSwapRequest,
+  userRole
 }) => {
   const [startDate, setStartDate] = useState("2026-07-04");
   const [endDate, setEndDate] = useState("2026-07-06");
@@ -92,47 +94,49 @@ export const ShiftsScreen: React.FC<ShiftsScreenProps> = ({
       {/* Optimizer & Swap forms column */}
       <div className="space-y-6">
         {/* Scheduler run form */}
-        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-6">
-          <div className="border-b border-gray-100 pb-4">
-            <h2 className="text-lg font-bold text-gray-900">Scheduling Optimizer</h2>
-            <p className="text-gray-400 text-xs mt-1">Generate fatigue-aware schedules automatically.</p>
-          </div>
-
-          <form onSubmit={handleGenerate} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label htmlFor="startDate" className="text-xs font-bold text-gray-400 uppercase">Start Date</label>
-                <input 
-                  id="startDate"
-                  type="date" 
-                  value={startDate} 
-                  onChange={e => setStartDate(e.target.value)} 
-                  required 
-                  className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:border-blue-500 transition text-sm text-gray-700 bg-white"
-                />
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="endDate" className="text-xs font-bold text-gray-400 uppercase">End Date</label>
-                <input 
-                  id="endDate"
-                  type="date" 
-                  value={endDate} 
-                  onChange={e => setEndDate(e.target.value)} 
-                  required 
-                  className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:border-blue-500 transition text-sm text-gray-700 bg-white"
-                />
-              </div>
+        {(userRole === "admin" || userRole === "hospital_owner") && (
+          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-6">
+            <div className="border-b border-gray-100 pb-4">
+              <h2 className="text-lg font-bold text-gray-900">Scheduling Optimizer</h2>
+              <p className="text-gray-400 text-xs mt-1">Generate fatigue-aware schedules automatically.</p>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={generating}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 px-4 rounded-lg transition-all duration-150 active:scale-95 shadow-sm shadow-blue-200"
-            >
-              {generating ? "Optimizing shift matrices..." : "Run Schedule Optimizer"}
-            </button>
-          </form>
-        </div>
+            <form onSubmit={handleGenerate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label htmlFor="startDate" className="text-xs font-bold text-gray-400 uppercase">Start Date</label>
+                  <input 
+                    id="startDate"
+                    type="date" 
+                    value={startDate} 
+                    onChange={e => setStartDate(e.target.value)} 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:border-blue-500 transition text-sm text-gray-700 bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="endDate" className="text-xs font-bold text-gray-400 uppercase">End Date</label>
+                  <input 
+                    id="endDate"
+                    type="date" 
+                    value={endDate} 
+                    onChange={e => setEndDate(e.target.value)} 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:border-blue-500 transition text-sm text-gray-700 bg-white"
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={generating}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2.5 px-4 rounded-lg transition-all duration-150 active:scale-95 shadow-sm shadow-blue-200"
+              >
+                {generating ? "Optimizing shift matrices..." : "Run Schedule Optimizer"}
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Swap request form */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-6">
