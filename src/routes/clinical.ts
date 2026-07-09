@@ -320,12 +320,13 @@ router.post("/ai/optimize-operations", authMiddleware, requireRole(["admin", "me
     const repo = new SqlHospitalRepository(hospitalId);
     
     // Fetch all current resource metadata
-    const [infra, resources, employees, patients, sessions] = await Promise.all([
+    const [infra, resources, employees, patients, sessions, staffMembers] = await Promise.all([
       repo.getInfrastructure(),
       repo.getResources(),
       repo.getEmployees(),
       repo.getPatients(),
-      repo.getTreatmentSessions()
+      repo.getTreatmentSessions(),
+      repo.getStaff()
     ]);
 
     const stateSnapshot = {
@@ -420,19 +421,47 @@ Output ONLY a valid JSON object matching the following structure (no markdown bo
 
     // 1. Save shifts in database
     if (parsed.shift_assignments && Array.isArray(parsed.shift_assignments)) {
-      const formattedShifts = parsed.shift_assignments.map((sa: any, index: number) => {
+      const formattedShifts: any[] = [];
+      parsed.shift_assignments.forEach((sa: any, index: number) => {
+        // Find employee in employees table
+        const emp = employees.find((e: any) => e.id === sa.employee_id);
+        if (!emp) return;
+
+        // Match employee with a staff_member from staff_members table to get their UUID
+        const staff = staffMembers.find((s: any) => {
+          if (s.email && emp.email && s.email.toLowerCase() === emp.email.toLowerCase()) {
+            return true;
+          }
+          const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
+          if (emp.name && fullName === emp.name.toLowerCase()) {
+            return true;
+          }
+          if (emp.name && s.first_name && s.last_name && 
+              emp.name.toLowerCase().includes(s.first_name.toLowerCase()) && 
+              emp.name.toLowerCase().includes(s.last_name.toLowerCase())) {
+            return true;
+          }
+          return false;
+        });
+
+        if (!staff) {
+          console.warn(`[CareFlow AI] Could not map employee ${emp.name} (${sa.employee_id}) to staff_members UUID`);
+          return;
+        }
+
         const start = sa.shift_type === "Morning" ? "07:00:00" : sa.shift_type === "Evening" ? "15:00:00" : "23:00:00";
         const end = sa.shift_type === "Morning" ? "15:00:00" : sa.shift_type === "Evening" ? "23:00:00" : "07:00:00";
-        return {
+        
+        formattedShifts.push({
           id: `shift-ai-${Date.now()}-${index}`,
           hospital_id: hospitalId,
-          staff_member_id: sa.employee_id,
+          staff_member_id: staff.id, // Use correct UUID
           shift_date: sa.shift_date,
           shift_type: sa.shift_type.toLowerCase(),
           start_time: `${sa.shift_date}T${start}Z`,
           end_time: `${sa.shift_date}T${end}Z`,
           status: "scheduled"
-        };
+        });
       });
       await repo.addShifts(formattedShifts);
     }
