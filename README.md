@@ -269,7 +269,7 @@ careflow/
 
 ## 📝 License & Copyright
 
-**All rights reserved — AA Tech Labs**
+**All rights reserved — AA FORGE**
 
 CareFlow is proprietary software. Unauthorized reproduction, distribution, or modification is prohibited.
 
