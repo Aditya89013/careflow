@@ -304,6 +304,8 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       ...(history ?? []).map(h => ({ role: h.role, content: h.content })),
       { role: "user", content: message }
     ];
+    let data: any = null;
+    let geminiDirectResult: { reply: string | null; toolName: string | null; toolArgs: any | null } | null = null;
     let lastError: string | null = null;
     try {
       if (getOpenRouterKeys().length > 0) {
