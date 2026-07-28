@@ -170,8 +170,10 @@ export async function callOpenRouterWithFallback(payload: any): Promise<any> {
       
       const errText = await orResponse.text();
       console.warn(`[CareFlow AI] Key Index ${currentKeyIndex % keys.length} failed with status: ${orResponse.status}`, errText);
+      (global as any).__last_or_error = `HTTP ${orResponse.status}: ${errText.substring(0, 100)}`;
     } catch (err: any) {
       console.warn(`[CareFlow AI] Key Index ${currentKeyIndex % keys.length} network error:`, err?.message);
+      (global as any).__last_or_error = `NetErr: ${err?.message}`;
     }
     
     // Switch to next key on failure
@@ -392,8 +394,9 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
     }
     const orKeyCount = getOpenRouterKeys().length;
     const hasGemini = Boolean(getGeminiKey());
+    const lastErr = (global as any).__last_or_error || "none";
     return res.status(200).json({
-      reply: `**CareFlow Operation Command Center Actions Matrix** (Keys: OR=${orKeyCount}, Gem=${hasGemini})
+      reply: `**CareFlow Operation Command Center Actions Matrix** (Keys: OR=${orKeyCount}, Gem=${hasGemini}, Err=${lastErr})
 
 | Operational Target | Execution Parameter Context Phrase |
 | :--- | :--- |
