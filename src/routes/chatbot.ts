@@ -309,6 +309,7 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       if (getOpenRouterKeys().length > 0) {
         data = await callOpenRouterWithFallback({
           model: "google/gemini-2.5-flash",
+          max_tokens: 1000,
           messages,
           tools: TOOLS,
           tool_choice: "auto"
@@ -363,6 +364,7 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
         try {
           const followData = await callOpenRouterWithFallback({
             model: "google/gemini-2.5-flash",
+            max_tokens: 1000,
             messages: followMessages
           });
           const text = followData.choices?.[0]?.message?.content;
@@ -390,12 +392,16 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       const reply = buildReply(toolName, toolResult);
       return res.status(200).json({ reply, tool_used: toolName, tool_result: toolResult });
     }
-    const orKeyCount = getOpenRouterKeys().length;
-    const hasGemini = Boolean(getGeminiKey());
-    const capturedErr = (global as any).__last_or_error || lastError || "none";
     return res.status(200).json({
-      reply: `[DEBUG RESPONSE] OR_Keys=${orKeyCount}, Gem_Key=${hasGemini}, LastErr=${capturedErr}`,
-      error_detail: capturedErr
+      reply: `**CareFlow Operation Command Center Actions Matrix**
+
+| Operational Target | Execution Parameter Context Phrase |
+| :--- | :--- |
+| 🏥 Patient Admission & Triage | *"Admit critical patient John Doe to ICU with ventilator"* |
+| 🔬 SOFA-2 Allocation Matcher | *"Get SOFA-2 recommendations for patient p-123"* |
+| ✅ Roster/Bed Finalization | *"Assign patient p-123 to bed b2"* |
+| 📅 Forward Circadian Rostering | *"Generate shifts for next 3 days"* |
+| 📊 Real-Time Census State | *"Show current capacity and queue"* | `
     });
   } catch (err: any) {
     console.error("[CareFlow AI] Error processing request:", err.message);
