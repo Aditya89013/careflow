@@ -387,8 +387,10 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       const reply = buildReply(toolName, toolResult);
       return res.status(200).json({ reply, tool_used: toolName, tool_result: toolResult });
     }
+    const orKeyCount = getOpenRouterKeys().length;
+    const hasGemini = Boolean(getGeminiKey());
     return res.status(200).json({
-      reply: `**CareFlow Operation Command Center Actions Matrix**
+      reply: `**CareFlow Operation Command Center Actions Matrix** (Keys: OR=${orKeyCount}, Gem=${hasGemini})
 
 | Operational Target | Execution Parameter Context Phrase |
 | :--- | :--- |
@@ -397,7 +399,6 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
 | ✅ Roster/Bed Finalization | *"Assign patient p-123 to bed b2"* |
 | 📅 Forward Circadian Rostering | *"Generate shifts for next 3 days"* |
 | 📊 Real-Time Census State | *"Show current capacity and queue"* | `
-
     });
   } catch (err: any) {
     console.error("[CareFlow AI] Error processing request:", err.message);
