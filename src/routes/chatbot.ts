@@ -304,10 +304,7 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       ...(history ?? []).map(h => ({ role: h.role, content: h.content })),
       { role: "user", content: message }
     ];
-    // Main Multi-Key Fallback Execution (OpenRouter -> Direct Gemini)
-    let data: any = null;
-    let geminiDirectResult: { reply: string | null; toolName: string | null; toolArgs: any | null } | null = null;
-
+    let lastError: string | null = null;
     try {
       if (getOpenRouterKeys().length > 0) {
         data = await callOpenRouterWithFallback({
@@ -318,6 +315,7 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
         });
       }
     } catch (openRouterErr: any) {
+      lastError = openRouterErr.message;
       console.warn("[CareFlow AI] OpenRouter API failed or unconfigured:", openRouterErr.message);
     }
 
@@ -394,10 +392,10 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
     }
     const orKeyCount = getOpenRouterKeys().length;
     const hasGemini = Boolean(getGeminiKey());
-    const lastErr = (global as any).__last_or_error || "none";
+    const capturedErr = (global as any).__last_or_error || lastError || "none";
     return res.status(200).json({
-      reply: `[DEBUG LLM FAILED] OR_Keys=${orKeyCount}, Gem_Key=${hasGemini}, Error=${lastErr}`,
-      debug: { orKeyCount, hasGemini, lastErr }
+      reply: `[DEBUG RESPONSE] OR_Keys=${orKeyCount}, Gem_Key=${hasGemini}, LastErr=${capturedErr}`,
+      error_detail: capturedErr
     });
   } catch (err: any) {
     console.error("[CareFlow AI] Error processing request:", err.message);
