@@ -25,7 +25,5 @@ add_envs.js
 .gitignore
 .vercel/
 
-# Ignore standard dependencies
+# Ignore root node_modules only (frontend/dist is built by Vercel and MUST be included)
 node_modules/
-dist/
-frontend/dist/
