@@ -79,28 +79,11 @@ function MainApp() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
-  // Auto-correct activeTab selection on role switch / login
+  // Auto-set activeTab when user logs in or logs out
   useEffect(() => {
     if (!user) {
       setActiveTab("finder");
-      return;
-    }
-    const allowedTabs = ["dashboard", "intake", "finder", "shifts"].filter(tabId => {
-      if (user.role === "super_admin") {
-        return tabId === "dashboard";
-      }
-      if (user.role === "admin" || user.role === "hospital_owner") {
-        return tabId === "dashboard" || tabId === "shifts";
-      }
-      if (user.role === "doctor" || user.role === "nurse" || user.role === "medical_director" || user.role === "dept_head") {
-        return true;
-      }
-      if (user.role === "receptionist") {
-        return tabId === "dashboard" || tabId === "intake" || tabId === "shifts";
-      }
-      return tabId === "dashboard" || tabId === "shifts";
-    });
-    if (!allowedTabs.includes(activeTab)) {
+    } else {
       setActiveTab("dashboard");
     }
   }, [user]);
@@ -414,6 +397,201 @@ function MainApp() {
             <span>&copy; {new Date().getFullYear()} CareFlow Secure Health Network.</span>
           </div>
         </footer>
+            setShifts(payload.shifts);
+          } else if (payload.type === "EMS_INCOMING_ALERT") {
+            addLog(`ALERT: EMS incoming alert dispatched.`);
+            setIncomingAlerts(prev => [payload.alert, ...prev]);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      ws.onerror = () => {
+        startPollingFallback();
+      };
+
+      ws.onclose = () => {
+        startPollingFallback();
+      };
+    } catch (e) {
+      console.warn("WebSocket init error:", e);
+      startPollingFallback();
+    }
+
+    return () => {
+      if (ws) ws.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [isAuthenticated]);
+
+  // Offline sync processing
+  const processOutbox = async () => {
+    if (outbox.length === 0 || !isOnline) return;
+    addLog(`Processing offline outbox queue (${outbox.length} actions pending)...`);
+    for (const item of outbox) {
+      try {
+        const res = await fetch(`${API_URL}/${item.endpoint}`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify(item.payload)
+        });
+        if (res.ok) {
+          setOutbox(prev => prev.filter(i => i !== item));
+        }
+      } catch (err) {
+        console.error("Failed to sync offline item:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isOnline) {
+      processOutbox();
+    }
+  }, [isOnline, outbox]);
+
+  const fetchRecommendations = async (patientId: string) => {
+    if (!isOnline) return;
+    setLoadingRecs(true);
+    try {
+      const res = await fetch(`${API_URL}/allocations/recommendations/${patientId}`, {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRecommendations(data.recommendations);
+      }
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to compute match recommendations.");
+    } finally {
+      setLoadingRecs(false);
+    }
+  };
+
+  const handleIntakeSubmit = async (payload: any) => {
+    if (!isOnline) {
+      setOutbox(prev => [...prev, { endpoint: "patients", payload }]);
+      addLog("Intake saved to offline outbox queue.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/patients/register`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        addLog(`Successfully admitted patient.`);
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to admit patient.");
+    }
+  };
+
+  const handleAllocateConfirm = async (payload: any) => {
+    if (!isOnline) {
+      setOutbox(prev => [...prev, { endpoint: "allocations", payload }]);
+      addLog("Allocation placement saved to offline outbox queue.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/allocations`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        addLog("Resource allocation placement complete.");
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to allocate resources.");
+    }
+  };
+
+  const handleGenerateShifts = async (payload: any) => {
+    try {
+      const res = await fetch(`${API_URL}/shifts/generate`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShifts(data.shifts);
+        addLog("Constraint-based circadian shift roster generated successfully.");
+      }
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to generate shifts.");
+    }
+  };
+
+  const handleSwapRequest = async (payload: any) => {
+    try {
+      const res = await fetch(`${API_URL}/shifts/swaps`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        addLog("Shift swap request registered. Awaiting manager approval.");
+      }
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to submit shift swap request.");
+    }
+  };
+
+  const handleSendAlert = async (payload: any) => {
+    try {
+      const res = await fetch(`${API_URL}/public/hospitals/${payload.hospitalId}/notify-arrival`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setShowArrivalAck(true);
+        setTimeout(() => setShowArrivalAck(false), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      addLog("Failed to dispatch EMS warning.");
+    }
+  };
+
+  // Patient Portal View
+  if (isAuthenticated && user?.role === "patient") {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
+          <div className="flex items-center space-x-3">
+            <img src={careflowLogo} alt="CareFlow Logo" className="h-8 w-8 object-contain opacity-90" />
+            <div>
+              <h1 className="font-semibold text-lg text-gray-900 tracking-tight leading-none">CareFlow</h1>
+              <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">Patient Portal</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors"
+          >
+            Logout
+          </button>
+        </header>
+        <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
+          <RoleRouter />
+        </main>
+        <footer className="bg-transparent py-6">
+          <div className="max-w-7xl mx-auto px-6 text-center text-xs text-gray-400">
+            <span>&copy; {new Date().getFullYear()} CareFlow Secure Health Network.</span>
+          </div>
+        </footer>
         <ChatbotWidget userRole="patient" />
       </div>
     );
@@ -475,7 +653,7 @@ function MainApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
-        {/* Navigation Tabs (Only shown when authenticated, since Emergency Finder is default for public) */}
+        {/* Navigation Tabs */}
         {isAuthenticated && (
           <nav className="flex space-x-6 border-b border-gray-200 pb-px">
             {[
@@ -483,22 +661,7 @@ function MainApp() {
               { id: "intake", label: "Triage & Allocation" },
               { id: "finder", label: "Emergency Finder" },
               { id: "shifts", label: "Staff Scheduling" }
-            ].filter(tab => {
-              if (!user) return false;
-              if (user.role === "super_admin") {
-                return tab.id === "dashboard";
-              }
-              if (user.role === "admin" || user.role === "hospital_owner") {
-                return tab.id === "dashboard" || tab.id === "shifts";
-              }
-              if (user.role === "doctor" || user.role === "nurse" || user.role === "medical_director" || user.role === "dept_head") {
-                return true;
-              }
-              if (user.role === "receptionist") {
-                return tab.id === "dashboard" || tab.id === "intake" || tab.id === "shifts";
-              }
-              return tab.id === "dashboard" || tab.id === "shifts";
-            }).map(tab => (
+            ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
