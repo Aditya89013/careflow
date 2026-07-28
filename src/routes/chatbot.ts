@@ -10,7 +10,6 @@ const router = Router();
 // Key management — OpenRouter keys vs native Gemini key
 // ──────────────────────────────────────────────────────────────────
 export function getOpenRouterKeys(): string[] {
-  // Only include real OpenRouter keys (sk-or- prefix), not native Gemini keys
   const candidates = [
     process.env.OPENROUTER_KEY_1,
     process.env.OPENROUTER_KEY_2,
@@ -18,13 +17,17 @@ export function getOpenRouterKeys(): string[] {
     process.env.OPENROUTER_KEY_4,
     process.env.OPENROUTER_KEY,
     process.env.OPENROUTER_API_KEY,
-    process.env.VITE_OPENROUTER_KEY_1
+    process.env.VITE_OPENROUTER_KEY_1,
+    // Support OpenRouter keys stored under GEMINI_API_KEY variable name
+    process.env.GEMINI_API_KEY?.startsWith("sk-or-") ? process.env.GEMINI_API_KEY : undefined
   ].filter(Boolean) as string[];
   return Array.from(new Set(candidates));
 }
 
 export function getGeminiKey(): string | null {
-  return process.env.GEMINI_API_KEY ?? null;
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || key.startsWith("sk-or-")) return null;
+  return key;
 }
 
 // ──────────────────────────────────────────────────────────────────
