@@ -9,28 +9,38 @@ const router = Router();
 // ──────────────────────────────────────────────────────────────────
 // OpenRouter Multiple Keys Fallback (Secure Environment Variables)
 // ──────────────────────────────────────────────────────────────────
-const OPENROUTER_KEYS = [
-  process.env.OPENROUTER_KEY_1,
-  process.env.OPENROUTER_KEY_2,
-  process.env.OPENROUTER_KEY_3,
-  process.env.OPENROUTER_KEY_4
-].filter(Boolean) as string[];
+export function getOpenRouterKeys(): string[] {
+  const keys = [
+    process.env.OPENROUTER_KEY_1,
+    process.env.OPENROUTER_KEY_2,
+    process.env.OPENROUTER_KEY_3,
+    process.env.OPENROUTER_KEY_4,
+    process.env.OPENROUTER_KEY,
+    process.env.OPENROUTER_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.VITE_OPENROUTER_KEY_1
+  ].filter(Boolean) as string[];
+  return Array.from(new Set(keys));
+}
+
 let currentKeyIndex = 0;
+
 export async function callOpenRouterWithFallback(payload: any): Promise<any> {
-  if (OPENROUTER_KEYS.length === 0) {
+  const keys = getOpenRouterKeys();
+  if (keys.length === 0) {
     throw new Error("No OpenRouter API keys configured in environment variables.");
   }
   let attempts = 0;
-  while (attempts < OPENROUTER_KEYS.length) {
-    const activeKey = OPENROUTER_KEYS[currentKeyIndex];
+  while (attempts < keys.length) {
+    const activeKey = keys[currentKeyIndex % keys.length];
     try {
-      console.log(`[CareFlow AI] Trying OpenRouter Key Index: ${currentKeyIndex}`);
+      console.log(`[CareFlow AI] Trying OpenRouter Key Index: ${currentKeyIndex % keys.length}`);
       const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${activeKey}`,
           "Content-Type":  "application/json",
-          "HTTP-Referer":  "http://localhost:3000",
+          "HTTP-Referer":  "https://careflow-med-inky.vercel.app",
           "X-Title":       "CareFlow Command Hub"
         },
         body: JSON.stringify(payload)
@@ -39,13 +49,14 @@ export async function callOpenRouterWithFallback(payload: any): Promise<any> {
         return await orResponse.json();
       }
       
-      console.warn(`[CareFlow AI] Key Index ${currentKeyIndex} failed with status: ${orResponse.status}`);
-    } catch (err) {
-      console.warn(`[CareFlow AI] Key Index ${currentKeyIndex} network error.`);
+      const errText = await orResponse.text();
+      console.warn(`[CareFlow AI] Key Index ${currentKeyIndex % keys.length} failed with status: ${orResponse.status}`, errText);
+    } catch (err: any) {
+      console.warn(`[CareFlow AI] Key Index ${currentKeyIndex % keys.length} network error:`, err?.message);
     }
     
     // Switch to next key on failure
-    currentKeyIndex = (currentKeyIndex + 1) % OPENROUTER_KEYS.length;
+    currentKeyIndex = (currentKeyIndex + 1) % keys.length;
     attempts++;
   }
   throw new Error("All configured OpenRouter API keys have failed or exhausted.");
@@ -173,35 +184,47 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       { role: "user", content: message }
     ];
     // Main Multi-Key Fallback Execution
-    const data = await callOpenRouterWithFallback({
-      model: "google/gemini-2.5-flash",
-      messages,
-      tools: TOOLS,
-      tool_choice: "auto"
-    });
-    const choice    = data.choices?.[0];
-    const toolCalls = choice?.message?.tool_calls;
-    if (toolCalls?.length) {
-      const call = toolCalls[0];
-      const args = JSON.parse(call.function.arguments);
-      toolName   = call.function.name;
-      
-      // Execute local service layer
-      toolResult = await dispatch(toolName, args, repo, allocationService, schedulingService, hospitalId);
-      const followMessages = [
-        ...messages,
-        { role: "assistant", content: null, tool_calls: toolCalls },
-        { role: "tool", tool_call_id: call.id, content: JSON.stringify(toolResult) }
-      ];
-      const followData = await callOpenRouterWithFallback({
+    let data: any = null;
+    try {
+      data = await callOpenRouterWithFallback({
         model: "google/gemini-2.5-flash",
-        messages: followMessages
+        messages,
+        tools: TOOLS,
+        tool_choice: "auto"
       });
-      const text = followData.choices?.[0]?.message?.content;
-      if (text) return res.status(200).json({ reply: text, tool_used: toolName, tool_result: toolResult });
-    } else {
-      const text = choice?.message?.content;
-      if (text) return res.status(200).json({ reply: text });
+    } catch (openRouterErr: any) {
+      console.warn("[CareFlow AI] OpenRouter API unavailable, falling back to local intent parser:", openRouterErr.message);
+    }
+
+    if (data) {
+      const choice    = data.choices?.[0];
+      const toolCalls = choice?.message?.tool_calls;
+      if (toolCalls?.length) {
+        const call = toolCalls[0];
+        const args = JSON.parse(call.function.arguments);
+        toolName   = call.function.name;
+        
+        // Execute local service layer
+        toolResult = await dispatch(toolName, args, repo, allocationService, schedulingService, hospitalId);
+        const followMessages = [
+          ...messages,
+          { role: "assistant", content: null, tool_calls: toolCalls },
+          { role: "tool", tool_call_id: call.id, content: JSON.stringify(toolResult) }
+        ];
+        try {
+          const followData = await callOpenRouterWithFallback({
+            model: "google/gemini-2.5-flash",
+            messages: followMessages
+          });
+          const text = followData.choices?.[0]?.message?.content;
+          if (text) return res.status(200).json({ reply: text, tool_used: toolName, tool_result: toolResult });
+        } catch (e) {
+          // If follow-up fails, return built reply below
+        }
+      } else {
+        const text = choice?.message?.content;
+        if (text) return res.status(200).json({ reply: text });
+      }
     }
     if (!toolName) {
       const lower = message.toLowerCase();
