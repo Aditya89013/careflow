@@ -64,8 +64,19 @@ if (attendanceRouterObj) {
   app.use("/api/v1", attendanceRouterObj); // mounts /api/v1/attendance/*
 }
 
-// Serve built frontend static files
-const frontendDist = path.join(__dirname, "../frontend/dist");
+import fs from "fs";
+
+// Serve built frontend static files with multi-location fallback for Vercel lambdas
+const possibleDistPaths = [
+  path.join(__dirname, "../frontend/dist"),
+  path.join(process.cwd(), "frontend/dist"),
+  path.join(__dirname, "../../frontend/dist"),
+  "/var/task/frontend/dist"
+];
+
+const frontendDist = possibleDistPaths.find(p => fs.existsSync(p)) || possibleDistPaths[0];
+console.log("[CareFlow Server] Serving frontend dist from:", frontendDist);
+
 app.use(express.static(frontendDist));
 
 // SPA catch-all: any non-API route serves index.html for React Router
@@ -73,6 +84,13 @@ app.get("*", (req, res) => {
   const filePath = path.join(frontendDist, "index.html");
   res.sendFile(filePath, (err) => {
     if (err) {
+      // Try fallback index.html if primary path fails inside lambda
+      for (const altDist of possibleDistPaths) {
+        const altIndex = path.join(altDist, "index.html");
+        if (fs.existsSync(altIndex)) {
+          return res.sendFile(altIndex);
+        }
+      }
       console.error("[ERROR] Failed to serve index.html from:", filePath, err);
       res.status(500).send(`
         <html>
