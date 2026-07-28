@@ -75,12 +75,16 @@ export default function App() {
 
 function MainApp() {
   const { isAuthenticated, user, logout, token } = useAuth();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "intake" | "finder" | "shifts">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "intake" | "finder" | "shifts">("finder");
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
   // Auto-correct activeTab selection on role switch / login
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setActiveTab("finder");
+      return;
+    }
     const allowedTabs = ["dashboard", "intake", "finder", "shifts"].filter(tabId => {
       if (user.role === "super_admin") {
         return tabId === "dashboard";
@@ -99,7 +103,7 @@ function MainApp() {
     if (!allowedTabs.includes(activeTab)) {
       setActiveTab("dashboard");
     }
-  }, [user, activeTab]);
+  }, [user]);
 
   const [outbox, setOutbox] = useState<any[]>([]);
   const [logs, setLogs] = useState<string[]>([
@@ -255,26 +259,25 @@ function MainApp() {
           body: JSON.stringify(item.payload)
         });
         if (res.ok) {
-          addLog(`Synced offline action: ${item.endpoint}`);
+          setOutbox(prev => prev.filter(i => i !== item));
         }
       } catch (err) {
         console.error("Failed to sync offline item:", err);
       }
     }
-    setOutbox([]);
-    fetchData();
   };
 
   useEffect(() => {
-    if (isOnline && outbox.length > 0) {
+    if (isOnline) {
       processOutbox();
     }
   }, [isOnline, outbox]);
 
   const fetchRecommendations = async (patientId: string) => {
+    if (!isOnline) return;
     setLoadingRecs(true);
     try {
-      const res = await fetch(`${API_URL}/patients/${patientId}/recommendations`, {
+      const res = await fetch(`${API_URL}/allocations/recommendations/${patientId}`, {
         headers: getHeaders()
       });
       if (res.ok) {
@@ -343,7 +346,7 @@ function MainApp() {
       if (res.ok) {
         const data = await res.json();
         setShifts(data.shifts);
-        addLog("Shift schedule matrices synchronized.");
+        addLog("Constraint-based circadian shift roster generated successfully.");
       }
     } catch (err) {
       console.error(err);
@@ -384,13 +387,8 @@ function MainApp() {
     }
   };
 
-  // If not authenticated, render LoginPage directly
-  if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={() => {}} />;
-  }
-
   // Patient Portal View
-  if (user?.role === "patient") {
+  if (isAuthenticated && user?.role === "patient") {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
@@ -421,86 +419,113 @@ function MainApp() {
     );
   }
 
-  // Staff / Administrators View
+  // Public / Unauthenticated Default View OR Staff View
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Top Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-50">
         <div className="flex items-center space-x-3">
           <img src={careflowLogo} alt="CareFlow Logo" className="h-8 w-8 object-contain opacity-90" />
           <div>
             <h1 className="font-semibold text-lg text-gray-900 tracking-tight leading-none">CareFlow</h1>
-            <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">Operations Simulator</p>
+            <p className="text-[10px] text-gray-500 font-medium tracking-wide mt-1 uppercase">
+              {isAuthenticated ? "Operations Command Center" : "Public Emergency Network"}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-6">
-          <div className="flex flex-col text-right">
-            <span className="text-xs font-medium text-gray-900">{user?.first_name}</span>
-            <span className="text-[10px] text-gray-500 uppercase tracking-wide">{user?.role.replace("_", " ")}</span>
-          </div>
+          {isAuthenticated ? (
+            <>
+              <div className="flex flex-col text-right">
+                <span className="text-xs font-medium text-gray-900">{user?.first_name}</span>
+                <span className="text-[10px] text-gray-500 uppercase tracking-wide">{user?.role.replace("_", " ")}</span>
+              </div>
 
-          <button
-            onClick={() => setIsOnline(!isOnline)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center space-x-2 transition-colors ${
-              isOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
-            <span>{isOnline ? "ONLINE" : "OFFLINE"}</span>
-          </button>
+              <button
+                onClick={() => setIsOnline(!isOnline)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center space-x-2 transition-colors ${
+                  isOnline ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
+                <span>{isOnline ? "ONLINE" : "OFFLINE"}</span>
+              </button>
 
-          <button
-            onClick={logout}
-            className="text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors"
-          >
-            Logout
-          </button>
+              <button
+                onClick={logout}
+                className="text-gray-500 hover:text-gray-900 font-medium text-sm transition-colors"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-sm transition-all flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              <span>Staff / Patient Login</span>
+            </button>
+          )}
         </div>
       </header>
 
+      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
-        {/* Sleek Minimalist Tabs */}
-        <nav className="flex space-x-6 border-b border-gray-200 pb-px">
-          {[
-            { id: "dashboard", label: "Dashboard" },
-            { id: "intake", label: "Triage & Allocation" },
-            { id: "finder", label: "Emergency Finder" },
-            { id: "shifts", label: "Staff Scheduling" }
-          ].filter(tab => {
-            if (!user) return false;
-            if (user.role === "super_admin") {
-              return tab.id === "dashboard";
-            }
-            if (user.role === "admin" || user.role === "hospital_owner") {
+        {/* Navigation Tabs (Only shown when authenticated, since Emergency Finder is default for public) */}
+        {isAuthenticated && (
+          <nav className="flex space-x-6 border-b border-gray-200 pb-px">
+            {[
+              { id: "dashboard", label: "Dashboard" },
+              { id: "intake", label: "Triage & Allocation" },
+              { id: "finder", label: "Emergency Finder" },
+              { id: "shifts", label: "Staff Scheduling" }
+            ].filter(tab => {
+              if (!user) return false;
+              if (user.role === "super_admin") {
+                return tab.id === "dashboard";
+              }
+              if (user.role === "admin" || user.role === "hospital_owner") {
+                return tab.id === "dashboard" || tab.id === "shifts";
+              }
+              if (user.role === "doctor" || user.role === "nurse" || user.role === "medical_director" || user.role === "dept_head") {
+                return true;
+              }
+              if (user.role === "receptionist") {
+                return tab.id === "dashboard" || tab.id === "intake" || tab.id === "shifts";
+              }
               return tab.id === "dashboard" || tab.id === "shifts";
-            }
-            if (user.role === "doctor" || user.role === "nurse" || user.role === "medical_director" || user.role === "dept_head") {
-              return true; // all tabs allowed
-            }
-            if (user.role === "receptionist") {
-              return tab.id === "dashboard" || tab.id === "intake" || tab.id === "shifts";
-            }
-            // fallback for other staff (lab_tech, pharmacist, ward_boy, employee)
-            return tab.id === "dashboard" || tab.id === "shifts";
-          }).map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`pb-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id 
-                  ? "border-b-2 border-slate-900 text-slate-900" 
-                  : "border-b-2 border-transparent text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+            }).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`pb-3 text-sm font-medium transition-colors ${
+                  activeTab === tab.id 
+                    ? "border-b-2 border-slate-900 text-slate-900" 
+                    : "border-b-2 border-transparent text-gray-400 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        )}
 
         <div>
-          {activeTab === "dashboard" && <RoleRouter />}
+          {(!isAuthenticated || activeTab === "finder") && (
+            <FinderScreen 
+              hospitalId="8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d"
+              onSendAlert={handleSendAlert}
+              showArrivalAck={showArrivalAck}
+            />
+          )}
 
-          {activeTab === "intake" && (
+          {isAuthenticated && activeTab === "dashboard" && <RoleRouter />}
+
+          {isAuthenticated && activeTab === "intake" && (
             <IntakeScreen 
               patients={patients}
               onIntake={handleIntakeSubmit}
@@ -512,15 +537,7 @@ function MainApp() {
             />
           )}
 
-          {activeTab === "finder" && (
-            <FinderScreen 
-              hospitalId="8a7b9c1d-2e3f-4a5b-6c7d-8e9f0a1b2c3d"
-              onSendAlert={handleSendAlert}
-              showArrivalAck={showArrivalAck}
-            />
-          )}
-
-          {activeTab === "shifts" && (
+          {isAuthenticated && activeTab === "shifts" && (
             <ShiftsScreen 
               shifts={shifts}
               onGenerateShifts={handleGenerateShifts}
@@ -530,8 +547,27 @@ function MainApp() {
           )}
         </div>
       </main>
-      <ChatbotWidget userRole={user?.role || "staff"} />
+
+      {/* Login Modal Overlay for Unauthenticated Users */}
+      {showLoginModal && !isAuthenticated && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden">
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-2 rounded-full hover:bg-slate-100 transition-all z-10"
+              title="Close Login Modal"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <LoginPage onLoginSuccess={() => setShowLoginModal(false)} />
+          </div>
+        </div>
+      )}
+
+      <ChatbotWidget userRole={user?.role || "public"} />
     </div>
   );
-        }
-      
+}
