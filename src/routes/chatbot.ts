@@ -396,15 +396,8 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
     const hasGemini = Boolean(getGeminiKey());
     const lastErr = (global as any).__last_or_error || "none";
     return res.status(200).json({
-      reply: `**CareFlow Operation Command Center Actions Matrix** (Keys: OR=${orKeyCount}, Gem=${hasGemini}, Err=${lastErr})
-
-| Operational Target | Execution Parameter Context Phrase |
-| :--- | :--- |
-| 🏥 Patient Admission & Triage | *"Admit critical patient John Doe to ICU with ventilator"* |
-| 🔬 SOFA-2 Allocation Matcher | *"Get SOFA-2 recommendations for patient p-123"* |
-| ✅ Roster/Bed Finalization | *"Assign patient p-123 to bed b2"* |
-| 📅 Forward Circadian Rostering | *"Generate shifts for next 3 days"* |
-| 📊 Real-Time Census State | *"Show current capacity and queue"* | `
+      reply: `[DEBUG LLM FAILED] OR_Keys=${orKeyCount}, Gem_Key=${hasGemini}, Error=${lastErr}`,
+      debug: { orKeyCount, hasGemini, lastErr }
     });
   } catch (err: any) {
     console.error("[CareFlow AI] Error processing request:", err.message);
