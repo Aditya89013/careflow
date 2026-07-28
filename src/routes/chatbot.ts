@@ -7,20 +7,136 @@ import { authMiddleware } from "../middleware/auth";
 import { broadcastHospitalEvent } from "../ws_events";
 const router = Router();
 // ──────────────────────────────────────────────────────────────────
-// OpenRouter Multiple Keys Fallback (Secure Environment Variables)
+// Key management — OpenRouter keys vs native Gemini key
 // ──────────────────────────────────────────────────────────────────
 export function getOpenRouterKeys(): string[] {
-  const keys = [
+  // Only include real OpenRouter keys (sk-or- prefix), not native Gemini keys
+  const candidates = [
     process.env.OPENROUTER_KEY_1,
     process.env.OPENROUTER_KEY_2,
     process.env.OPENROUTER_KEY_3,
     process.env.OPENROUTER_KEY_4,
     process.env.OPENROUTER_KEY,
     process.env.OPENROUTER_API_KEY,
-    process.env.GEMINI_API_KEY,
     process.env.VITE_OPENROUTER_KEY_1
   ].filter(Boolean) as string[];
-  return Array.from(new Set(keys));
+  return Array.from(new Set(candidates));
+}
+
+export function getGeminiKey(): string | null {
+  return process.env.GEMINI_API_KEY ?? null;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Direct Google Gemini API call (for when no OpenRouter key exists)
+// Uses the native generateContent endpoint with function declarations
+// ──────────────────────────────────────────────────────────────────
+async function callGeminiDirect(
+  messages: { role: string; content: string | null }[],
+  tools: any[],
+  systemPrompt: string
+): Promise<{ reply: string | null; toolName: string | null; toolArgs: any | null }> {
+  const apiKey = getGeminiKey();
+  if (!apiKey) throw new Error("No GEMINI_API_KEY configured.");
+
+  // Convert OpenAI-style messages to Gemini format
+  const contents = messages
+    .filter(m => m.role !== "system" && m.content)
+    .map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content as string }]
+    }));
+
+  // Convert OpenAI function-calling tools to Gemini function declarations
+  const functionDeclarations = tools.map(t => ({
+    name: t.function.name,
+    description: t.function.description,
+    parameters: t.function.parameters
+  }));
+
+  const requestBody = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    tools: [{ function_declarations: functionDeclarations }],
+    tool_config: { function_calling_config: { mode: "AUTO" } },
+    generation_config: { temperature: 0.3, max_output_tokens: 1024 }
+  };
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${errText}`);
+  }
+
+  const data: any = await response.json();
+  const candidate = data.candidates?.[0];
+  const parts = candidate?.content?.parts ?? [];
+
+  // Check for function call
+  const fnCall = parts.find((p: any) => p.functionCall);
+  if (fnCall) {
+    return {
+      reply: null,
+      toolName: fnCall.functionCall.name,
+      toolArgs: fnCall.functionCall.args ?? {}
+    };
+  }
+
+  // Plain text response
+  const textPart = parts.find((p: any) => p.text);
+  return { reply: textPart?.text ?? null, toolName: null, toolArgs: null };
+}
+
+// After tool execution: get Gemini to summarise the result
+async function callGeminiWithToolResult(
+  messages: { role: string; content: string | null }[],
+  systemPrompt: string,
+  toolName: string,
+  toolArgs: any,
+  toolResult: any
+): Promise<string | null> {
+  const apiKey = getGeminiKey();
+  if (!apiKey) return null;
+
+  const contents = messages
+    .filter(m => m.role !== "system" && m.content)
+    .map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content as string }]
+    }));
+
+  // Append function call + response turn
+  contents.push({ role: "model", parts: [{ functionCall: { name: toolName, args: toolArgs } }] as any });
+  contents.push({ role: "user", parts: [{ functionResponse: { name: toolName, response: toolResult } }] as any });
+
+  const requestBody = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    generation_config: { temperature: 0.3, max_output_tokens: 1024 }
+  };
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    }
+  );
+
+  if (!response.ok) return null;
+  const data: any = await response.json();
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const textPart = parts.find((p: any) => p.text);
+  return textPart?.text ?? null;
 }
 
 let currentKeyIndex = 0;
@@ -183,17 +299,47 @@ Always prioritize tool execution if the intent matches. Respond in brief, techni
       ...(history ?? []).map(h => ({ role: h.role, content: h.content })),
       { role: "user", content: message }
     ];
-    // Main Multi-Key Fallback Execution
+    // Main Multi-Key Fallback Execution (OpenRouter -> Direct Gemini)
     let data: any = null;
+    let geminiDirectResult: { reply: string | null; toolName: string | null; toolArgs: any | null } | null = null;
+
     try {
-      data = await callOpenRouterWithFallback({
-        model: "google/gemini-2.5-flash",
-        messages,
-        tools: TOOLS,
-        tool_choice: "auto"
-      });
+      if (getOpenRouterKeys().length > 0) {
+        data = await callOpenRouterWithFallback({
+          model: "google/gemini-2.5-flash",
+          messages,
+          tools: TOOLS,
+          tool_choice: "auto"
+        });
+      }
     } catch (openRouterErr: any) {
-      console.warn("[CareFlow AI] OpenRouter API unavailable, falling back to local intent parser:", openRouterErr.message);
+      console.warn("[CareFlow AI] OpenRouter API failed or unconfigured:", openRouterErr.message);
+    }
+
+    // Try direct Gemini API if OpenRouter didn't yield result but GEMINI_API_KEY exists
+    if (!data && getGeminiKey()) {
+      try {
+        console.log("[CareFlow AI] Calling direct Gemini API...");
+        geminiDirectResult = await callGeminiDirect(messages, TOOLS, systemPrompt);
+      } catch (geminiErr: any) {
+        console.warn("[CareFlow AI] Direct Gemini API failed:", geminiErr.message);
+      }
+    }
+
+    if (geminiDirectResult) {
+      if (geminiDirectResult.toolName) {
+        toolName = geminiDirectResult.toolName;
+        const args = geminiDirectResult.toolArgs || {};
+        toolResult = await dispatch(toolName, args, repo, allocationService, schedulingService, hospitalId);
+        try {
+          const followUpText = await callGeminiWithToolResult(messages, systemPrompt, toolName, args, toolResult);
+          if (followUpText) return res.status(200).json({ reply: followUpText, tool_used: toolName, tool_result: toolResult });
+        } catch (e) {
+          // If follow-up fails, built reply will be used below
+        }
+      } else if (geminiDirectResult.reply) {
+        return res.status(200).json({ reply: geminiDirectResult.reply });
+      }
     }
 
     if (data) {
