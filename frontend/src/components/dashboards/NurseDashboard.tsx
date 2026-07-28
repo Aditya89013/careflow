@@ -270,6 +270,7 @@ export const NurseDashboard: React.FC = () => {
         </div>
 
       </div>
-    </div>v>
+    </div>
   );
 };
+
