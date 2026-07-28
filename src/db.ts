@@ -1364,8 +1364,12 @@ export class SqlHospitalRepository implements HospitalRepository {
       const emp = mockDb.employees.find(e => e.id === id && e.hospital_id === this.hospitalId);
       return emp || null;
     }
-    const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE id = $1 AND hospital_id = $2", [id, this.hospitalId]);
-    return res.rows[0] || null;
+    try {
+      const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE id = $1 AND hospital_id = $2", [id, this.hospitalId]);
+      return res.rows[0] || null;
+    } catch (_) {
+      return null;
+    }
   }
 
   public async getEmployeeByEmail(email: string): Promise<any | null> {
@@ -1373,8 +1377,12 @@ export class SqlHospitalRepository implements HospitalRepository {
       const emp = mockDb.employees.find(e => e.email.toLowerCase() === email.toLowerCase());
       return emp || null;
     }
-    const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE LOWER(email) = LOWER($1)", [email]);
-    return res.rows[0] || null;
+    try {
+      const res = await executeQuery(this.hospitalId, "SELECT * FROM employees WHERE LOWER(email) = LOWER($1)", [email]);
+      return res.rows[0] || null;
+    } catch (_) {
+      return null;
+    }
   }
 
   public async getTreatmentSessions(): Promise<any[]> {
@@ -1442,12 +1450,18 @@ export async function seedDatabase(): Promise<void> {
 
   const client = await pool.connect();
   try {
-    console.log("[CareFlow Seed] Starting database seeding...");
-
-    // 0. Ensure schema migrations for recent additions
+    // Ensure employees table exists
     await client.query(`
-      ALTER TABLE universal_patients ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
-      ALTER TABLE universal_patients ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+      CREATE TABLE IF NOT EXISTS employees (
+        id VARCHAR(255) PRIMARY KEY,
+        hospital_id VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        role VARCHAR(255) NOT NULL,
+        current_shift VARCHAR(255),
+        assigned_ward_id VARCHAR(255),
+        password_hash VARCHAR(255)
+      );
     `);
 
     // Add email + password_hash to staff_members if not already present
